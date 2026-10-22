@@ -1,4 +1,6 @@
-import { contrastRatio, readableTextColor } from './contrast';
+import {
+  contrastRatio, deltaE2000, deltaE2000Lab, readableTextColor,
+} from './contrast';
 import { createRng } from './rng';
 
 describe('contrastRatio (WCAG 2.1)', () => {
@@ -29,5 +31,17 @@ describe('readableTextColor', () => {
 
   it('Given an unreadable value, then it falls back to dark text', () => {
     expect(readableTextColor('not-a-colour')).toBe('#000000');
+  });
+});
+
+describe('deltaE2000 (CIEDE2000 colour difference)', () => {
+  it('Given the published reference pair, then the difference matches (Sharma, Wu & Dalal 2005)', () => {
+    expect(deltaE2000Lab([50, 2.6772, -79.7751], [50, 0, -82.7485])).toBeCloseTo(2.0425, 4);
+    expect(deltaE2000Lab([50, 2.5, 0], [73, 25, -18])).toBeCloseTo(27.1492, 4);
+  });
+
+  it('Given the same colour twice, then there is no difference; given black and white, then it is large', () => {
+    expect(deltaE2000('#a59687', '#a59687')).toBeCloseTo(0, 6);
+    expect(deltaE2000('#000000', '#ffffff')).toBeGreaterThan(99);
   });
 });

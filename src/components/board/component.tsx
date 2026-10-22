@@ -1,12 +1,13 @@
 import * as React from 'react';
 import {
-  useEffect, useRef, useState, useSyncExternalStore,
+  useEffect, useMemo, useRef, useState, useSyncExternalStore,
 } from 'react';
 import { createGame, guess, toggleMark } from '../../game/rules';
 import {
   NO_STANDING, outcomeForChange, ResultKind, Standing,
 } from '../../game/results';
 import { createStore, Store } from '../../game/store';
+import { assignRegionColors } from '../../game/region-colors';
 import {
   createSoundPlayer, loadMuted, PlaySound, saveMuted, soundForChange,
 } from '../../game/sounds';
@@ -254,6 +255,7 @@ function Board({
   };
 
   const { size, regions, solution } = puzzle;
+  const regionColors = useMemo(() => assignRegionColors(regions, styles.REGION_COLORS), [puzzle]);
   const finished = game.status !== 'playing';
 
   return (
@@ -312,7 +314,7 @@ function Board({
               tabIndex={!blocked && focused[0] === row && focused[1] === col ? 0 : -1}
               aria-label={`Row ${row + 1}, column ${col + 1}${
                 mark === 'found' ? `, ${people[region].name} found` : MARK_LABELS[mark]}`}
-              style={styles.cell(styles.REGION_COLORS[region % styles.REGION_COLORS.length], edges)}
+              style={styles.cell(regionColors[region], edges)}
               onClick={() => onClick(row, col)}
               onDoubleClick={() => onDoubleClick(row, col)}
               onKeyDown={(event) => onKeyDown(event, row, col)}

@@ -1,4 +1,4 @@
-import { contrastRatio } from '../game/contrast';
+import { contrastRatio, deltaE2000 } from '../game/contrast';
 import { COLORS, REGION_COLORS } from './styles';
 
 // WCAG 2.1 AA: 1.4.3 text >= 4.5:1, 1.4.11 graphical objects and UI component boundaries >= 3:1.
@@ -36,5 +36,15 @@ describe('board colours meet WCAG 2.1 AA', () => {
     it(`Given ${label}, then it has at least 4.5:1 contrast`, () => {
       expect(contrastRatio(fg, bg)).toBeGreaterThanOrEqual(TEXT_MIN);
     });
+  });
+});
+
+describe('region colours are easy to tell apart', () => {
+  it('Given any two region colours, then they differ by at least 18 (CIEDE2000)', () => {
+    const close: string[] = [];
+    REGION_COLORS.forEach((a, i) => REGION_COLORS.slice(i + 1).forEach((b) => {
+      if (deltaE2000(a, b) < 18) close.push(`${a} ${b}`);
+    }));
+    expect(close).toEqual([]);
   });
 });

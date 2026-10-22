@@ -5,6 +5,8 @@ import {
 import Board, { CLICK_DELAY_MS, LONG_PRESS_MS } from './component';
 import { Person, Puzzle } from '../../game/types';
 import { createStore } from '../../game/store';
+import { assignRegionColors } from '../../game/region-colors';
+import { REGION_COLORS } from '../styles';
 
 // Person r sits in row r at column solution[r].
 const puzzle: Puzzle = {
@@ -442,5 +444,17 @@ describe('Board in a shared race', () => {
     const player = raceBoard({ standing: createStore({ ...noWinner, canStartNew: true }) });
     expect(screen.queryByRole('button', { name: 'New game' })).toBeNull();
     player.view.unmount();
+  });
+});
+
+describe('Board region colours', () => {
+  it('Given a puzzle, then each square is painted with the colour assigned to its region', () => {
+    render(<Board puzzle={puzzle} people={people} isHost={false} onEndGame={jest.fn()} />);
+    const colors = assignRegionColors(puzzle.regions, REGION_COLORS);
+    const probe = document.createElement('div');
+    [[0, 0], [3, 5], [7, 7]].forEach(([row, col]) => {
+      probe.style.background = colors[puzzle.regions[row][col]];
+      expect(cell(row, col).style.background).toBe(probe.style.background);
+    });
   });
 });
