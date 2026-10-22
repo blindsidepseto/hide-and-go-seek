@@ -1,17 +1,11 @@
 # Security Policy
 
-<!-- ## Supported Versions
+## Reporting a vulnerability
 
-We actively support BigBlueButton through the community forums and through security updates.
+Please report security issues in Hide and Go Seek privately, not in a public issue.
 
-| Version | Supported          |
-| ------- | ------------------ | -->
+Use GitHub's private reporting: open the repository's **Security** tab and choose **Report a vulnerability**, or go to https://github.com/blindsidepseto/hide-and-go-seek/security/advisories/new.
 
+Include what you found, the steps to reproduce it, and the BigBlueButton version you used.
 
-## Reporting a Vulnerability
-
-If you believe you have found a security vulnerability in BigBlueButton or its ecosystem (Greenlight, plugins, etc) please let us know directly by
-- using GitHub's "Report a vulnerability" functionality on https://github.com/bigbluebutton/bigbluebutton/security/advisories
-- or e-mailing security@bigbluebutton.org with as much detail as possible.
-
-Regards,... [BigBlueButton Team](https://docs.bigbluebutton.org/support/faq.html#bigbluebutton-committer)
+Problems in BigBlueButton itself, not in this plugin, should go to the BigBlueButton project: https://github.com/bigbluebutton/bigbluebutton/security/advisories.
