@@ -8,12 +8,15 @@ import {
 // What the host pushes to the `game` data channel. Every participant builds the same board from it.
 export interface GamePayload {
   gameId: string;
+  // The user who started the game; their browser posts the game's chat messages.
+  hostUserId: string;
   puzzle: string;
   people: Person[];
 }
 
 export interface Game {
   gameId: string;
+  hostUserId: string;
   puzzle: Puzzle;
   people: Person[];
 }
@@ -24,10 +27,16 @@ export function canHostGame(user?: { presenter: boolean; role: string }): boolea
   return !!user && (user.presenter || user.role === 'MODERATOR');
 }
 
-export function createGamePayload(users: MeetingUser[], size: number, rng: Rng): GamePayload {
+export function createGamePayload(
+  users: MeetingUser[],
+  size: number,
+  rng: Rng,
+  hostUserId: string,
+): GamePayload {
   const gameId = `${rng().toString(36).slice(2, 10)}${rng().toString(36).slice(2, 10)}`;
   return {
     gameId,
+    hostUserId,
     puzzle: encodePuzzle(pickPuzzle(size, rng)),
     people: selectPeople(users, size, rng),
   };
@@ -53,7 +62,7 @@ export function readGamePayload(
 ): Game | null {
   const payload = raw as Partial<GamePayload> | undefined;
   if (!payload || !isText(payload.gameId) || !isText(payload.puzzle)
-    || !Array.isArray(payload.people)) {
+    || !isText(payload.hostUserId) || !Array.isArray(payload.people)) {
     return null;
   }
   let puzzle: Puzzle;
@@ -86,5 +95,7 @@ export function readGamePayload(
       generic: person?.generic === true,
     };
   });
-  return { gameId: payload.gameId, puzzle, people };
+  return {
+    gameId: payload.gameId, hostUserId: payload.hostUserId, puzzle, people,
+  };
 }

@@ -1,8 +1,12 @@
 import * as React from 'react';
 import {
-  useEffect, useRef, useState,
+  useEffect, useRef, useState, useSyncExternalStore,
 } from 'react';
 import { createGame, guess, toggleMark } from '../../game/rules';
+import {
+  NO_STANDING, outcomeForChange, ResultKind, Standing,
+} from '../../game/results';
+import { createStore, Store } from '../../game/store';
 import {
   createSoundPlayer, loadMuted, PlaySound, saveMuted, soundForChange,
 } from '../../game/sounds';
@@ -18,6 +22,7 @@ export const CLICK_DELAY_MS = 250;
 export const LONG_PRESS_MS = 500;
 
 const defaultPlaySound = createSoundPlayer();
+const noStanding = createStore(NO_STANDING);
 
 const MOVES: Record<string, [number, number]> = {
   ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1],
@@ -37,6 +42,12 @@ interface BoardProps {
   onProgress?: (state: GameState) => void;
   // Plays a game sound; replaceable in tests.
   playSound?: PlaySound;
+  // Live race standing (winner, host controls), updated without re-mounting the board.
+  standing?: Store<Standing>;
+  // Reports a correct guess, wrong guess, finish or being out, for the shared results.
+  onOutcome?: (kind: ResultKind, state: GameState) => void;
+  // Host only: go back to the size picker for a new game.
+  onNewGame?: () => void;
 }
 
 function initials(name: string): string {
@@ -98,21 +109,24 @@ function HowToPlay({ onClose }: { onClose: () => void }) {
   );
 }
 
+function endMessage(won: boolean, found: number, total: number, standing: Standing): string {
+  if (!won) return `You found ${found} of ${total} people. Everyone is now shown on the board.`;
+  if (standing.iAmWinner) return `You won! You found all ${total} people first.`;
+  if (standing.winnerName) return `You found all ${total} people. ${standing.winnerName} was first.`;
+  return `You found all ${total} people.`;
+}
+
 function EndScreen({
-  won, found, total, onClose,
+  won, found, total, standing, onClose,
 }: {
-  won: boolean; found: number; total: number; onClose: () => void;
+  won: boolean; found: number; total: number; standing: Standing; onClose: () => void;
 }) {
   const title = won ? 'You found everyone!' : 'Game over';
   return (
     <div style={styles.overlay}>
       <div role="dialog" aria-label={title} style={styles.card}>
         <h2 style={styles.heading}>{title}</h2>
-        <p>
-          {won
-            ? `You found all ${total} people.`
-            : `You found ${found} of ${total} people. Everyone is now shown on the board.`}
-        </p>
+        <p>{endMessage(won, found, total, standing)}</p>
         <div style={styles.actions}>
           <button type="button" onClick={onClose} style={styles.primaryButton}>See the board</button>
         </div>
@@ -122,7 +136,8 @@ function EndScreen({
 }
 
 function Board({
-  puzzle, people, isHost, onEndGame, savedState, onProgress, playSound,
+  puzzle, people, isHost, onEndGame, savedState, onProgress, playSound, standing: standingStore,
+  onOutcome, onNewGame,
 }: BoardProps): React.ReactElement {
   const [game, setGame] = useState<GameState>(() => savedState ?? createGame(puzzle));
   const [showHelp, setShowHelp] = useState(!savedState);
@@ -149,9 +164,21 @@ function Board({
   useEffect(() => {
     onProgress?.(game);
     const sound = soundForChange(heard.current, game);
+    const outcome = outcomeForChange(heard.current, game);
     heard.current = game;
     if (sound && !muted) playSound(sound);
+    if (outcome) onOutcome?.(outcome, game);
   }, [game]);
+
+  const standing = useSyncExternalStore(standingStore.subscribe, standingStore.get);
+  // Winner fanfare once, when the server confirms this player was first (not on re-open).
+  const winnerHeard = useRef(standing.iAmWinner);
+  useEffect(() => {
+    if (standing.iAmWinner && !winnerHeard.current) {
+      winnerHeard.current = true;
+      if (!muted) playSound('winner');
+    }
+  }, [standing.iAmWinner]);
 
   const toggleMute = () => {
     saveMuted(!muted);
@@ -245,6 +272,10 @@ function Board({
         >
           {muted ? '🔇' : '🔊'}
         </button>
+        {standing.winnerName && <span>{`Winner: ${standing.winnerName}`}</span>}
+        {isHost && standing.canStartNew && (
+          <button type="button" onClick={onNewGame} style={styles.primaryButton}>New game</button>
+        )}
         {isHost && (
           <button type="button" onClick={onEndGame} style={styles.secondaryButton}>End game for everyone</button>
         )}
@@ -313,6 +344,7 @@ function Board({
           won={game.status === 'won'}
           found={game.found}
           total={size}
+          standing={standing}
           onClose={() => setShowEnd(false)}
         />
       )}
@@ -324,6 +356,9 @@ Board.defaultProps = {
   savedState: undefined,
   onProgress: undefined,
   playSound: defaultPlaySound,
+  standing: noStanding,
+  onOutcome: undefined,
+  onNewGame: undefined,
 };
 
 export default Board;

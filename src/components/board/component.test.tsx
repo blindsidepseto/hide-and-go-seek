@@ -4,6 +4,7 @@ import {
 } from '@testing-library/react';
 import Board, { CLICK_DELAY_MS, LONG_PRESS_MS } from './component';
 import { Person, Puzzle } from '../../game/types';
+import { createStore } from '../../game/store';
 
 // Person r sits in row r at column solution[r].
 const puzzle: Puzzle = {
@@ -338,5 +339,108 @@ describe('Board sounds', () => {
       }}
     />);
     expect(playSound).not.toHaveBeenCalled();
+  });
+});
+
+describe('Board in a shared race', () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  const noWinner = {
+    winnerName: null as string | null, iAmWinner: false, canStartNew: false,
+  };
+
+  const raceDefaults = () => ({
+    puzzle,
+    people,
+    isHost: false,
+    onEndGame: jest.fn(),
+    playSound: jest.fn(),
+    onOutcome: jest.fn(),
+    onNewGame: jest.fn(),
+    standing: createStore(noWinner),
+  });
+
+  function raceBoard(overrides: Partial<ReturnType<typeof raceDefaults>> = {}) {
+    const props = { ...raceDefaults(), ...overrides };
+    const view = render(<Board {...props} />);
+    fireEvent.click(screen.getByRole('button', { name: "Let's play" }));
+    return { ...props, view };
+  }
+
+  it('Given a player guesses, then each outcome is reported for the shared results', () => {
+    const { onOutcome } = raceBoard();
+    doubleClick(cell(0, 0));
+    doubleClick(cell(0, 1));
+    expect(onOutcome.mock.calls.map((call) => call[0])).toEqual(['correct', 'wrong']);
+    expect(onOutcome.mock.calls[1][1]).toMatchObject({ found: 1, mistakes: 1 });
+  });
+
+  it('Given marking an X, then nothing is reported (X marks stay private)', () => {
+    const { onOutcome } = raceBoard();
+    fireEvent.click(cell(0, 1));
+    act(() => { jest.advanceTimersByTime(CLICK_DELAY_MS); });
+    expect(onOutcome).not.toHaveBeenCalled();
+  });
+
+  it('Given someone else wins, then every board shows the winner and the player can keep playing', () => {
+    const { standing } = raceBoard();
+    act(() => { standing.set({ ...noWinner, winnerName: 'Alex' }); });
+    expect(screen.getByText('Winner: Alex')).toBeTruthy();
+    doubleClick(cell(0, 0));
+    expect(cell(0, 0).getAttribute('data-mark')).toBe('found');
+  });
+
+  it('Given the server confirms this player won, then the winner sound plays once', () => {
+    const { standing, playSound } = raceBoard();
+    act(() => { standing.set({ ...noWinner, winnerName: 'Me', iAmWinner: true }); });
+    act(() => {
+      standing.set({
+        ...noWinner, winnerName: 'Me', iAmWinner: true, canStartNew: true,
+      });
+    });
+    expect(playSound.mock.calls.filter((call) => call[0] === 'winner')).toHaveLength(1);
+  });
+
+  it('Given a board re-opened after this player already won, then the winner sound does not replay', () => {
+    const playSound = jest.fn();
+    render(<Board
+      puzzle={puzzle}
+      people={people}
+      isHost={false}
+      onEndGame={jest.fn()}
+      playSound={playSound}
+      standing={createStore({ ...noWinner, winnerName: 'Me', iAmWinner: true })}
+      savedState={{
+        solution: puzzle.solution, marks: Array.from({ length: 8 }, () => Array(8).fill('empty')), mistakes: 0, found: 8, status: 'won',
+      }}
+    />);
+    expect(playSound).not.toHaveBeenCalledWith('winner');
+  });
+
+  it('Given this player finishes but someone was first, then the end screen says who won', () => {
+    const { standing } = raceBoard();
+    act(() => { standing.set({ ...noWinner, winnerName: 'Alex' }); });
+    puzzle.solution.forEach((col, row) => doubleClick(cell(row, col)));
+    expect(screen.getByRole('dialog', { name: 'You found everyone!' }).textContent).toContain('Alex was first');
+  });
+
+  it('Given this player is the confirmed winner, then the end screen says they won', () => {
+    const { standing } = raceBoard();
+    puzzle.solution.forEach((col, row) => doubleClick(cell(row, col)));
+    act(() => { standing.set({ ...noWinner, winnerName: 'Me', iAmWinner: true }); });
+    expect(screen.getByRole('dialog', { name: 'You found everyone!' }).textContent).toContain('You won');
+  });
+
+  it('Given a winner or everyone out, then the host gets a New game button; players and a game in progress do not', () => {
+    const { standing, onNewGame, view } = raceBoard({ isHost: true });
+    expect(screen.queryByRole('button', { name: 'New game' })).toBeNull();
+    act(() => { standing.set({ ...noWinner, canStartNew: true }); });
+    fireEvent.click(screen.getByRole('button', { name: 'New game' }));
+    expect(onNewGame).toHaveBeenCalled();
+    view.unmount();
+    const player = raceBoard({ standing: createStore({ ...noWinner, canStartNew: true }) });
+    expect(screen.queryByRole('button', { name: 'New game' })).toBeNull();
+    player.view.unmount();
   });
 });

@@ -16,6 +16,11 @@ import { GameState } from '../../game/types';
 import SetupCard from '../setup-card/component';
 import { eligibleUsers, MeetingUserRecord } from '../../game/people';
 import {
+  chatLineFor, everyoneOut, findWinner, finishRank, instructionsChat, NO_STANDING,
+  readResult, ResultEntry, ResultPayload,
+} from '../../game/results';
+import { createStore } from '../../game/store';
+import {
   canHostGame, createGamePayload, GamePayload, readGamePayload,
 } from '../../game/session';
 
@@ -54,6 +59,11 @@ function PluginManager({ pluginUuid }: PluginManagerProps): React.ReactElement {
     'game',
     DataChannelTypes.LATEST_ITEM,
   );
+  // [DILIGENCE: GDPR] Every player's outcomes (right, wrong, finished, out), kept on the BBB
+  // server until the next game or End game clears them.
+  const {
+    data: resultsChannel, pushEntry: pushResult, deleteEntry: deleteResults,
+  } = pluginApi.useDataChannel<ResultPayload>('results', DataChannelTypes.ALL_ITEMS);
   const [setupOpen, setSetupOpen] = useState(false);
 
   const usersReady = !!users && !users.loading && !!users.data;
@@ -73,6 +83,55 @@ function PluginManager({ pluginUuid }: PluginManagerProps): React.ReactElement {
     [gameKey, avatarKey],
   );
 
+  const userNames = new Map((users?.data?.user ?? []).map((user) => [user.userId, user.name]));
+  const nameOf = (userId: string) => userNames.get(userId) ?? 'Someone';
+  const results: ResultEntry[] = (resultsChannel?.data ?? [])
+    .map((entry) => ({
+      entryId: entry.entryId,
+      createdBy: entry.createdBy,
+      createdAt: entry.createdAt,
+      payload: readResult(entry.payloadJson),
+    }))
+    .filter((entry) => entry.payload && entry.payload.gameKey === gameKey);
+  const resultsKey = results.map((entry) => entry.entryId).join(',');
+  const winnerId = gameKey ? findWinner(results, gameKey) : null;
+
+  // Live race standing for the board, which lives in its own React root.
+  const standing = useRef(createStore(NO_STANDING)).current;
+  useEffect(() => {
+    standing.set({
+      winnerName: winnerId ? nameOf(winnerId) : null,
+      iAmWinner: !!winnerId && winnerId === currentUser?.userId,
+      canStartNew: !!winnerId || (!!gameKey && everyoneOut(results, gameKey)),
+    });
+  });
+
+  // Only the game creator's browser posts to public chat, so each line appears once.
+  // Results already present when it loads (e.g. after a reload) are not reposted.
+  const isChatPoster = !!game && !!currentUser && game.hostUserId === currentUser.userId;
+  const posted = useRef<{ gameKey: string; ids: Set<string> } | null>(null);
+  useEffect(() => {
+    if (!isChatPoster || resultsChannel?.loading) return;
+    if (posted.current?.gameKey !== gameKey) {
+      posted.current = { gameKey, ids: new Set(results.map((entry) => entry.entryId)) };
+      return;
+    }
+    [...results]
+      .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt))
+      .filter((entry) => !posted.current.ids.has(entry.entryId))
+      .forEach((entry) => {
+        posted.current.ids.add(entry.entryId);
+        pluginApi.serverCommands.chat.sendPublicChatMessage({
+          textMessageInMarkdownFormat: chatLineFor(
+            entry.payload.kind,
+            nameOf(entry.createdBy),
+            { ...entry.payload, size: game.puzzle.size },
+            finishRank(results, gameKey, entry.createdBy),
+          ),
+        });
+      });
+  }, [isChatPoster, gameKey, resultsKey, resultsChannel?.loading]);
+
   // Each board saves its progress here, so re-registering the board (role change, setup card
   // opened and cancelled, avatars arriving) never resets a player's game.
   const progress = useRef(new Map<string, GameState>());
@@ -80,13 +139,22 @@ function PluginManager({ pluginUuid }: PluginManagerProps): React.ReactElement {
   // The setup card and board are mounted in their own React roots, so they read the latest
   // values through refs rather than re-registering (which would reset a player's progress).
   const live = useRef({
-    users: [] as MeetingUserRecord[], pushEntry, deleteEntry, gameKey,
+    users: [] as MeetingUserRecord[],
+    pushEntry,
+    deleteEntry,
+    pushResult,
+    deleteResults,
+    gameKey,
+    userId: currentUser?.userId,
   });
   live.current = {
     users: users?.data?.user ?? [],
     pushEntry,
     deleteEntry,
+    pushResult,
+    deleteResults,
     gameKey,
+    userId: currentUser?.userId,
   };
 
   useEffect(() => {
@@ -113,12 +181,21 @@ function PluginManager({ pluginUuid }: PluginManagerProps): React.ReactElement {
       // [REVIEW REQUIRED] Data storage: writes participants' names and avatar links to the
       // meeting's shared data channel, kept on the BBB server until End game resets it.
       const previous = live.current.gameKey;
-      live.current.pushEntry(createGamePayload(people, size, Math.random));
+      // Data minimisation: the previous game's results go before the new game starts.
+      live.current.deleteResults([RESET_DATA_CHANNEL]);
+      live.current.pushEntry(createGamePayload(people, size, Math.random, live.current.userId));
       // Data minimisation: drop the previous game's names from the server.
       if (previous) live.current.deleteEntry([previous]);
+      // [DILIGENCE: GDPR] Public chat is kept for the meeting and included in recordings.
+      pluginApi.serverCommands.chat.sendPublicChatMessage({
+        textMessageInMarkdownFormat: instructionsChat(size),
+      });
       setSetupOpen(false);
     };
-    const endGame = () => live.current.deleteEntry([RESET_DATA_CHANNEL]);
+    const endGame = () => {
+      live.current.deleteEntry([RESET_DATA_CHANNEL]);
+      live.current.deleteResults([RESET_DATA_CHANNEL]);
+    };
 
     if (isHost && setupOpen) {
       pluginApi.setGenericContentItems([
@@ -146,6 +223,11 @@ function PluginManager({ pluginUuid }: PluginManagerProps): React.ReactElement {
               onEndGame={endGame}
               savedState={progress.current.get(gameKey)}
               onProgress={(state) => progress.current.set(gameKey, state)}
+              standing={standing}
+              onOutcome={(kind, state) => live.current.pushResult({
+                gameKey, kind, found: state.found, mistakes: state.mistakes,
+              })}
+              onNewGame={() => setSetupOpen(true)}
             />,
           ),
         }),
