@@ -25,7 +25,7 @@ interface PluginManagerProps {
 
 // [DILIGENCE: GDPR] Reads participant names and avatar links so they can appear in the game.
 const USERS_SUBSCRIPTION = `
-  subscription FindThePeopleUsers {
+  subscription HideAndGoSeekUsers {
     user {
       userId
       name
@@ -92,7 +92,7 @@ function PluginManager({ pluginUuid }: PluginManagerProps): React.ReactElement {
   useEffect(() => {
     pluginApi.setAppsGalleryItems(isHost ? [
       new AppsGalleryEntry({
-        name: 'Find the People',
+        name: 'Hide and Go Seek',
         icon: 'user',
         onClick: () => setSetupOpen(true),
       }),

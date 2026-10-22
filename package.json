@@ -1,5 +1,5 @@
 {
-  "name": "bbb-plugin-find-the-people",
+  "name": "bbb-plugin-hide-and-go-seek",
   "version": "0.0.1",
   "private": true,
   "main": "./src/index.tsx",

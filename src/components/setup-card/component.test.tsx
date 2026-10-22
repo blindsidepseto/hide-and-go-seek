@@ -10,6 +10,11 @@ describe('SetupCard', () => {
     expect(select.value).toBe('8');
   });
 
+  it('Given the setup card, then it is titled Hide and Go Seek', () => {
+    render(<SetupCard onStart={jest.fn()} onCancel={jest.fn()} ready />);
+    expect(screen.getByRole('dialog', { name: 'Hide and Go Seek' })).toBeTruthy();
+  });
+
   it('Given a chosen size, when Start is clicked, then onStart gets that size', () => {
     const onStart = jest.fn();
     render(<SetupCard onStart={onStart} onCancel={jest.fn()} ready />);

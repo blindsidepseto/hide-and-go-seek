@@ -1,4 +1,4 @@
-# Find the People — BigBlueButton plugin
+# Hide and Go Seek — BigBlueButton plugin
 
 A single-player logic puzzle shown in the whiteboard area. People from the meeting are hidden in a coloured grid (8×8 to 15×15):
 
@@ -8,7 +8,7 @@ A single-player logic puzzle shown in the whiteboard area. People from the meeti
 - keyboard: arrow keys move, Space marks an X, G guesses; touch: tap marks an X, press and hold guesses
 - 3 mistakes are allowed; the 4th ends the game
 
-The presenter or a moderator starts a game from the **Apps Gallery** ("Find the People") and picks the grid size. Every participant then gets their own private copy of the same puzzle, with a "How to play" card first. **End game for everyone** puts the whiteboard back.
+The presenter or a moderator starts a game from the **Apps Gallery** ("Hide and Go Seek") and picks the grid size. Every participant then gets their own private copy of the same puzzle, with a "How to play" card first. **End game for everyone** puts the whiteboard back.
 
 ## Compatibility
 
@@ -28,13 +28,13 @@ npm install
 npm test            # unit and component tests
 npm run lint
 npm start           # dev server on port 4701, manifest at /manifest.json
-npm run build-bundle   # dist/FindThePeople.js + dist/manifest.json
+npm run build-bundle   # dist/HideAndGoSeek.js + dist/manifest.json
 ```
 
 Enable in a meeting with the `/create` parameter:
 
 ```
-pluginManifests=[{"url":"https://<your-host>/plugins/find-the-people/manifest.json"}]
+pluginManifests=[{"url":"https://<your-host>/plugins/hide-and-go-seek/manifest.json"}]
 ```
 
 ## Puzzle bank

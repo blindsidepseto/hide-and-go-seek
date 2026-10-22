@@ -72,11 +72,11 @@ describe('PluginManager', () => {
     expect(lastCall(fakeApi.setAppsGalleryItems)).toEqual([]);
   });
 
-  it('Given the presenter, then a "Find the People" Apps Gallery entry is added', () => {
+  it('Given the presenter, then a "Hide and Go Seek" Apps Gallery entry is added', () => {
     fakeApi.currentUser = { presenter: true, role: 'VIEWER' };
     render(<PluginManager pluginUuid="uuid" />);
     expect(lastCall(fakeApi.setAppsGalleryItems).map((item: { name: string }) => item.name))
-      .toEqual(['Find the People']);
+      .toEqual(['Hide and Go Seek']);
   });
 
   it('Given no game, then the whiteboard area is left alone', () => {

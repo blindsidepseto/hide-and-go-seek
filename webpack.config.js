@@ -5,8 +5,8 @@ const path = require('path');
 module.exports = {
   entry: './src/index.tsx',
   output: {
-    filename: 'FindThePeople.js',
-    library: 'FindThePeople',
+    filename: 'HideAndGoSeek.js',
+    library: 'HideAndGoSeek',
     libraryTarget: 'umd',
     publicPath: '/',
     globalObject: 'this',

@@ -17,8 +17,8 @@ function SetupCard({ onStart, onCancel, ready }: SetupCardProps): React.ReactEle
   const [size, setSize] = useState(MIN_SIZE);
   return (
     <div style={styles.area}>
-      <div role="dialog" aria-label="Find the People" style={styles.card}>
-        <h2 style={styles.heading}>Find the People</h2>
+      <div role="dialog" aria-label="Hide and Go Seek" style={styles.card}>
+        <h2 style={styles.heading}>Hide and Go Seek</h2>
         <p>
           Everyone gets their own copy of the same puzzle in place of the whiteboard.
           The people hidden in it are from this meeting.
