@@ -179,7 +179,30 @@ describe('acceptedResults', () => {
     expect(ids(accepted)).not.toContain('c-again');
   });
 
-  it('Given faked or repeated results, then only legal next steps are accepted, so one player cannot flood chat', () => {
+  it('Given a player reloads mid-game, then their results count again once they pass their earlier progress, and they can still win', () => {
+    const entries = [
+      ...Array.from({ length: 5 }, (_, i) => r(`a${i}`, 'alex', i, 'correct', i + 1, 0)),
+      r('aw', 'alex', 5, 'wrong', 5, 1),
+      // reload: the fresh board counts from zero again, including wrong guesses
+      ...Array.from({ length: 7 }, (_, i) => r(`b${i}`, 'alex', 10 + i, 'correct', i + 1, 0)),
+      r('fin', 'alex', 20, 'finished', 8, 0),
+    ];
+    const accepted = acceptedResults(entries, 'g1', 8);
+    expect(ids(accepted)).toEqual(['a0', 'a1', 'a2', 'a3', 'a4', 'aw', 'b5', 'b6', 'fin']);
+    expect(findWinner(accepted, 'g1')).toBe('alex');
+  });
+
+  it('Given one result was lost on the way, then later results from that player still count', () => {
+    const entries = [
+      r('1', 'sam', 1, 'correct', 1, 0),
+      // found 2 never arrived
+      r('3', 'sam', 3, 'correct', 3, 0),
+      r('w', 'sam', 4, 'wrong', 3, 1),
+    ];
+    expect(ids(acceptedResults(entries, 'g1', 8))).toEqual(['1', '3', 'w']);
+  });
+
+  it('Given faked or repeated results, then only results that move the player forward are accepted, so one player cannot flood chat', () => {
     const spam = Array.from({ length: 50 }, (_, i) => r(`w${i}`, 'eve', i, 'wrong', 0, 999));
     const repeats = Array.from({ length: 50 }, (_, i) => r(`k${i}`, 'kai', i, 'correct', 1, 0));
     const accepted = acceptedResults([...spam, ...repeats], 'g1', 8);
@@ -187,7 +210,7 @@ describe('acceptedResults', () => {
   });
 
   it('Given a finish without having found everyone, then it is not accepted', () => {
-    expect(acceptedResults([r('f', 'eve', 1, 'finished', 8, 0)], 'g1', 8)).toEqual([]);
+    expect(acceptedResults([r('f', 'eve', 1, 'finished', 5, 0)], 'g1', 8)).toEqual([]);
   });
 
   it('Given results for another game, then they are left out', () => {

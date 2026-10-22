@@ -40,9 +40,9 @@ Built for **BigBlueButton 4.0.0**, which requires plugin SDK `1.0.0-beta.3` (`ht
 
 ## Known limits
 
-- Chat volume: every guess by every player is a chat line, roughly 300 lines for 30 students in one game. Each player can cause at most grid size + 3 lines per game; results that aren't a legal next step for that player are ignored.
+- Chat volume: every guess by every player is a chat line, roughly 300 lines for 30 students in one game. Each player can cause at most grid size + 3 lines per game: a result only counts if it moves that player forward.
 - If the game creator leaves mid-game, chat announcements stop for that game. Another moderator can start a new game.
-- Any participant can write to the results channel, so a technically skilled student could fake a finish by sending a believable sequence of results. The chat shows the real sender's name. A player who is out, or has already finished, can't come back by reloading the page.
+- Any participant can write to the results channel, so a technically skilled student could fake a finish by sending a believable sequence of results. The chat shows the real sender's name. A player who is out, or has already finished, can't come back by reloading the page. A player who reloads mid-game starts a fresh board; their results count again once they pass their earlier progress.
 
 ## Development
 

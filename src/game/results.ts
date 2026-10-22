@@ -59,11 +59,13 @@ export const byTime = (a: ResultEntry, b: ResultEntry) => (
   Date.parse(a.createdAt) - Date.parse(b.createdAt) || a.entryId.localeCompare(b.entryId)
 );
 
-// [REVIEW REQUIRED] Integrity: anyone can write to the results channel. Only results that are
-// a legal next step for that player count: found or wrong guesses go up by exactly one, a
-// finish needs everyone found, being out needs MAX_MISTAKES wrong guesses, and nothing counts
-// after a player has finished or is out. So a reload cannot restart a player, a finished player
-// cannot win twice, and one player can cause at most size + MAX_MISTAKES chat lines per game.
+// [REVIEW REQUIRED] Integrity: anyone can write to the results channel. A result only counts if
+// it moves that player forward: a correct guess or finish must raise their best "found" count,
+// a wrong guess or being out must raise their best "wrong" count, a finish needs everyone found,
+// being out needs MAX_MISTAKES wrong guesses, and nothing counts after a player has finished or
+// is out. Counts only have to go up (not by exactly one), so a reload mid-game or one lost result
+// does not lock a player out. A finished or out player cannot come back, and one player can
+// cause at most size + MAX_MISTAKES chat lines per game.
 export function acceptedResults(
   entries: ResultEntry[],
   gameKey: string,
@@ -76,16 +78,18 @@ export function acceptedResults(
     .filter((entry) => {
       const state = players.get(entry.createdBy) ?? { found: 0, mistakes: 0, done: false };
       const { kind, found, mistakes } = entry.payload;
-      const nextFound = found === state.found + 1 && mistakes === state.mistakes;
-      const nextMistake = mistakes === state.mistakes + 1 && found === state.found;
+      const moreFound = found > state.found;
+      const moreMistakes = mistakes > state.mistakes;
       const legal = !state.done && (
-        (kind === 'correct' && nextFound && found < size)
-        || (kind === 'finished' && nextFound && found === size)
-        || (kind === 'wrong' && nextMistake && mistakes < MAX_MISTAKES)
-        || (kind === 'out' && nextMistake && mistakes === MAX_MISTAKES));
+        (kind === 'correct' && moreFound && found < size)
+        || (kind === 'finished' && moreFound && found === size)
+        || (kind === 'wrong' && moreMistakes && mistakes < MAX_MISTAKES)
+        || (kind === 'out' && moreMistakes && mistakes === MAX_MISTAKES));
       if (legal) {
         players.set(entry.createdBy, {
-          found, mistakes, done: kind === 'finished' || kind === 'out',
+          found: Math.max(found, state.found),
+          mistakes: Math.max(mistakes, state.mistakes),
+          done: kind === 'finished' || kind === 'out',
         });
       }
       return legal;

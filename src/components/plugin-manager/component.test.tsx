@@ -111,6 +111,8 @@ beforeEach(() => {
   fakeApi.pushResult = jest.fn();
 });
 
+afterEach(() => jest.useRealTimers());
+
 // Every result a player makes on the way to finishing: 7 correct guesses, then the finish.
 const finishRun = (by: string, firstSecond: number) => [
   ...Array.from({ length: 7 }, (_, i) => result(`${by}-c${i}`, by, firstSecond + i, 'correct', i + 1, 0)),
@@ -348,17 +350,45 @@ describe('PluginManager', () => {
     jest.useRealTimers();
   });
 
-  it('Given results left over from an earlier game, then the creator deletes them from the server', () => {
+  const resultFor = (gameKey: string, entryId: string) => ({
+    ...result(entryId, 'alex', 1, 'correct', 1, 0),
+    payloadJson: {
+      gameKey, kind: 'correct', found: 1, mistakes: 0,
+    },
+  });
+
+  it('Given results left over from a game this browser showed before, then the creator deletes them from the server', () => {
+    fakeApi.currentUser = { userId: 'mod1', presenter: true, role: 'MODERATOR' };
+    fakeApi.users = meetingUsers;
+    fakeApi.channelEntries = [{ ...validGame, entryId: 'e0' }];
+    const { rerender } = render(<PluginManager pluginUuid="uuid" />);
+    fakeApi.channelEntries = [validGame];
+    fakeApi.resultEntries = [resultFor('e0', 'old1')];
+    rerender(<PluginManager pluginUuid="uuid" />);
+    expect(fakeApi.deleteResult).toHaveBeenCalledWith(['old1']);
+  });
+
+  it('Given results for a game this browser has not seen yet (someone else just started it), then they are not deleted', () => {
     fakeApi.currentUser = { userId: 'mod1', presenter: true, role: 'MODERATOR' };
     fakeApi.users = meetingUsers;
     fakeApi.channelEntries = [validGame];
-    fakeApi.resultEntries = [{
-      ...result('old1', 'alex', 1, 'correct', 1, 0),
-      payloadJson: {
-        gameKey: 'e0', kind: 'correct', found: 1, mistakes: 0,
-      },
-    }];
+    fakeApi.resultEntries = [resultFor('e9', 'newer1')];
     render(<PluginManager pluginUuid="uuid" />);
-    expect(fakeApi.deleteResult).toHaveBeenCalledWith(['old1']);
+    expect(fakeApi.deleteResult).not.toHaveBeenCalledWith(['newer1']);
+  });
+
+  it('Given a winner, when someone else finishes later, then the winner stays shown while that finish is checked', () => {
+    jest.useFakeTimers();
+    fakeApi.currentUser = { userId: 'mod1', presenter: true, role: 'MODERATOR' };
+    fakeApi.users = meetingUsers;
+    fakeApi.channelEntries = [validGame];
+    fakeApi.resultEntries = finishRun('alex', 0);
+    const { rerender } = render(<PluginManager pluginUuid="uuid" />);
+    const board = mountMainArea();
+    expect(board.textContent).toContain('Winner: Alex');
+    fakeApi.resultEntries = [...finishRun('alex', 0), ...finishRun('sam', 20)];
+    rerender(<PluginManager pluginUuid="uuid" />);
+    expect(board.textContent).toContain('Winner: Alex');
+    expect(button(board, 'New game')).toBeTruthy();
   });
 });

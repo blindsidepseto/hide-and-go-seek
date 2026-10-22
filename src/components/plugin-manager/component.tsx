@@ -113,17 +113,22 @@ function PluginManager({ pluginUuid }: PluginManagerProps): React.ReactElement {
   accepted.forEach((entry) => {
     if (!firstSeen.current.at.has(entry.entryId)) firstSeen.current.at.set(entry.entryId, now);
   });
-  const finishWait = Math.max(0, ...accepted
-    .filter((entry) => entry.payload.kind === 'finished')
-    .map((entry) => firstSeen.current.at.get(entry.entryId) + SETTLE_MS - now));
+  const waitFor = (entry: ResultEntry) => firstSeen.current.at.get(entry.entryId) + SETTLE_MS - now;
+  const pendingFinishes = accepted
+    .filter((entry) => entry.payload.kind === 'finished' && waitFor(entry) > 0)
+    .sort(byTime);
+  const finishWait = Math.max(0, ...pendingFinishes.map(waitFor));
   const [, setSettleTick] = useState(0);
   useEffect(() => {
     if (finishWait <= 0) return undefined;
     const timer = setTimeout(() => setSettleTick((tick) => tick + 1), finishWait);
     return () => clearTimeout(timer);
   });
-  const results = finishWait > 0
-    ? accepted.filter((entry) => entry.payload.kind !== 'finished')
+  // Only finishes at or after the earliest one still waiting are held back; an earlier,
+  // already-settled winner stays shown.
+  const results = pendingFinishes.length > 0
+    ? accepted.filter((entry) => entry.payload.kind !== 'finished'
+      || byTime(entry, pendingFinishes[0]) < 0)
     : accepted;
   const resultsKey = results.map((entry) => entry.entryId).join(',');
   const winnerId = gameKey ? findWinner(results, gameKey) : null;
@@ -164,10 +169,17 @@ function PluginManager({ pluginUuid }: PluginManagerProps): React.ReactElement {
       });
   }, [isChatPoster, gameKey, resultsKey, resultsChannel?.loading]);
 
-  // Data minimisation: results from an earlier game (e.g. pushed by a board that had not yet
-  // switched to the new game) are deleted from the server by the creator's browser.
+  // [REVIEW REQUIRED] Data deletion: the creator's browser deletes other participants' results
+  // for an earlier game (e.g. pushed by a board that had not yet switched to the new game).
+  // Only games this browser has itself shown count as earlier, so a browser that is behind
+  // never deletes results for a newer game it has not seen yet.
+  const shownGames = useRef(new Set<string>());
+  if (game) shownGames.current.add(gameKey);
   const staleIds = isChatPoster
-    ? allResults.filter((entry) => entry.payload.gameKey !== gameKey).map((entry) => entry.entryId)
+    ? allResults
+      .filter((entry) => entry.payload.gameKey !== gameKey
+        && shownGames.current.has(entry.payload.gameKey))
+      .map((entry) => entry.entryId)
     : [];
   const deleted = useRef(new Set<string>());
   useEffect(() => {
