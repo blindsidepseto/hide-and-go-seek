@@ -257,7 +257,11 @@ function Board({
               onPointerCancel={cancelPress}
             >
               {showPerson && <Avatar person={people[region]} missed={mark !== 'found'} />}
-              {!showPerson && mark === 'x' && <span style={styles.mark}>×</span>}
+              {!showPerson && mark === 'x' && (
+                <svg data-testid="x-mark" viewBox="0 0 10 10" aria-hidden="true" style={styles.xMark}>
+                  <path d="M1.5 1.5 L8.5 8.5 M8.5 1.5 L1.5 8.5" />
+                </svg>
+              )}
               {!showPerson && mark === 'wrong' && <span style={styles.wrongMark}>✕</span>}
             </button>
           );

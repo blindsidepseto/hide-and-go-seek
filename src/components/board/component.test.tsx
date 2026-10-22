@@ -185,6 +185,18 @@ describe('Board', () => {
     expect(cell(0, 1).getAttribute('data-mark')).toBe('x');
   });
 
+  it('Given a square marked X, then the X is large but slightly smaller than an avatar', () => {
+    startPlaying();
+    fireEvent.click(cell(0, 1));
+    act(() => { jest.advanceTimersByTime(CLICK_DELAY_MS); });
+    const xMark = cell(0, 1).querySelector('[data-testid="x-mark"]') as HTMLElement;
+    doubleClick(cell(0, 0));
+    const avatar = screen.getByTitle('Person 0');
+    expect(parseFloat(xMark.style.width)).toBeLessThan(parseFloat(avatar.style.width));
+    const avatarWidth = parseFloat(avatar.style.width);
+    expect(parseFloat(xMark.style.width)).toBeGreaterThanOrEqual(avatarWidth - 15);
+  });
+
   it('Given a hidden person, when double-clicked, then their avatar and name show and no X is left behind', () => {
     startPlaying();
     doubleClick(cell(0, 0));

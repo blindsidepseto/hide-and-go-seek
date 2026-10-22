@@ -117,6 +117,16 @@ export const cell = (
   overflow: 'hidden',
 });
 
+// Scales with the square; a little smaller than an avatar (82%).
+export const xMark: CSSProperties = {
+  width: '72%',
+  height: '72%',
+  stroke: '#374151',
+  strokeWidth: 1.4,
+  strokeLinecap: 'round',
+  fill: 'none',
+};
+
 export const mark: CSSProperties = {
   fontSize: 'min(3vh, 22px)', fontWeight: 700, color: '#374151', lineHeight: 1,
 };
