@@ -1,0 +1,24 @@
+{
+    "compilerOptions": {
+        "outDir": "./dist-tsc/",
+        "noImplicitAny": true,
+        "module": "es6",
+        "target": "es2019",
+        "jsx": "react",
+        "allowJs": true,
+        "moduleResolution": "node"
+    },
+    "include": [
+        "src/**/*"
+    ],
+    "paths": {
+        "*": [
+            "node_modules"
+        ]
+    },
+    "exclude": [
+        "node_modules",
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx"
+    ]
+}
