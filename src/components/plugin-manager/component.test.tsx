@@ -106,6 +106,7 @@ describe('PluginManager', () => {
     const target = `[data-testid="cell-0-${wrongCol}"]`;
     const first = document.createElement('div');
     act(() => { lastCall(fakeApi.setGenericContentItems)[0].contentFunction(first); });
+    fireEvent.click([...first.querySelectorAll('button')].find((b) => b.textContent === "Let's play"));
     fireEvent.click(first.querySelector(target));
     fireEvent.click(first.querySelector(target));
     fireEvent.doubleClick(first.querySelector(target));

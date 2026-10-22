@@ -11,6 +11,17 @@ import * as styles from '../styles';
 // A double-click starts with a click, so a single click waits this long before marking an X.
 export const CLICK_DELAY_MS = 250;
 
+// On touch screens, pressing and holding a square this long is a guess.
+export const LONG_PRESS_MS = 500;
+
+const MOVES: Record<string, [number, number]> = {
+  ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1],
+};
+
+const MARK_LABELS: Record<string, string> = {
+  empty: '', x: ', marked X', wrong: ', wrong guess',
+};
+
 interface BoardProps {
   puzzle: Puzzle;
   people: Person[];
@@ -64,6 +75,11 @@ function HowToPlay({ onClose }: { onClose: () => void }) {
           </li>
           <li>{`You can make ${MAX_MISTAKES} mistakes. The next one ends the game.`}</li>
         </ul>
+        <p>
+          Keyboard: arrow keys to move, Space to mark an X, G to guess.
+          {' '}
+          Touch screen: tap to mark an X, press and hold to guess.
+        </p>
         <div style={styles.actions}>
           <button type="button" onClick={onClose} style={styles.primaryButton}>Let&apos;s play</button>
         </div>
@@ -101,23 +117,89 @@ function Board({
   const [game, setGame] = useState<GameState>(() => savedState ?? createGame(puzzle));
   const [showHelp, setShowHelp] = useState(!savedState);
   const [showEnd, setShowEnd] = useState(true);
+  const [focused, setFocused] = useState<[number, number]>([0, 0]);
   const clickTimer = useRef<ReturnType<typeof setTimeout>>();
+  // The square whose X is waiting out the double-click window.
+  const pendingMark = useRef<[number, number] | null>(null);
+  const pressTimer = useRef<ReturnType<typeof setTimeout>>();
+  // Set after a long press, so a click the browser may send on release is not also an X.
+  const ignoreNextClick = useRef(false);
+  const lastPointerType = useRef('');
+  const cellRefs = useRef(new Map<string, HTMLButtonElement>());
 
-  useEffect(() => () => clearTimeout(clickTimer.current), []);
+  useEffect(() => () => {
+    clearTimeout(clickTimer.current);
+    clearTimeout(pressTimer.current);
+  }, []);
 
   useEffect(() => { onProgress?.(game); }, [game]);
 
-  const onClick = (row: number, col: number) => {
+  // The grid is not playable while the how-to-play card covers it.
+  const blocked = showHelp;
+  const isPending = (row: number, col: number) => pendingMark.current?.[0] === row
+    && pendingMark.current?.[1] === col;
+
+  // Applies a waiting X now (a move on another square should not cancel it).
+  const flushPendingMark = () => {
     clearTimeout(clickTimer.current);
-    clickTimer.current = setTimeout(
-      () => setGame((state) => toggleMark(state, row, col)),
-      CLICK_DELAY_MS,
-    );
+    const pending = pendingMark.current;
+    pendingMark.current = null;
+    if (pending) setGame((state) => toggleMark(state, pending[0], pending[1]));
+  };
+
+  const onClick = (row: number, col: number) => {
+    if (blocked) return;
+    if (ignoreNextClick.current) {
+      ignoreNextClick.current = false;
+      return;
+    }
+    if (!isPending(row, col)) flushPendingMark();
+    clearTimeout(clickTimer.current);
+    pendingMark.current = [row, col];
+    clickTimer.current = setTimeout(flushPendingMark, CLICK_DELAY_MS);
   };
 
   const onDoubleClick = (row: number, col: number) => {
-    clearTimeout(clickTimer.current);
+    if (blocked) return;
+    if (isPending(row, col)) {
+      // The clicks were the start of this double-click, not an X.
+      clearTimeout(clickTimer.current);
+      pendingMark.current = null;
+    } else {
+      flushPendingMark();
+    }
     setGame((state) => guess(state, row, col));
+  };
+
+  const onPointerDown = (event: React.PointerEvent, row: number, col: number) => {
+    ignoreNextClick.current = false;
+    lastPointerType.current = event.pointerType;
+    if (event.pointerType !== 'touch' && event.pointerType !== 'pen') return;
+    clearTimeout(pressTimer.current);
+    pressTimer.current = setTimeout(() => {
+      ignoreNextClick.current = true;
+      onDoubleClick(row, col);
+    }, LONG_PRESS_MS);
+  };
+
+  const cancelPress = () => clearTimeout(pressTimer.current);
+
+  const onKeyDown = (event: React.KeyboardEvent, row: number, col: number) => {
+    if (blocked) return;
+    if ((event.key === 'g' || event.key === 'G') && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      event.preventDefault();
+      onDoubleClick(row, col);
+      return;
+    }
+    const move = MOVES[event.key];
+    if (!move) return;
+    event.preventDefault();
+    const next: [number, number] = [
+      Math.min(Math.max(row + move[0], 0), puzzle.size - 1),
+      Math.min(Math.max(col + move[1], 0), puzzle.size - 1),
+    ];
+    setFocused(next);
+    cellRefs.current.get(`${next[0]}-${next[1]}`)?.focus();
   };
 
   const { size, regions, solution } = puzzle;
@@ -133,7 +215,16 @@ function Board({
           <button type="button" onClick={onEndGame} style={styles.secondaryButton}>End game for everyone</button>
         )}
       </div>
-      <div style={styles.grid(size)}>
+      <div
+        style={styles.grid(size)}
+        aria-hidden={blocked}
+        onContextMenu={(event) => {
+          // Only the touch long-press menu gets in the way; mouse right-click is left alone.
+          if (lastPointerType.current === 'touch' || lastPointerType.current === 'pen') {
+            event.preventDefault();
+          }
+        }}
+      >
         {regions.map((cells, row) => cells.map((region, col) => {
           const mark = game.marks[row][col];
           const hasPerson = solution[row] === col;
@@ -151,10 +242,19 @@ function Board({
               type="button"
               data-testid={`cell-${row}-${col}`}
               data-mark={mark}
-              aria-label={`Row ${row + 1}, column ${col + 1}`}
+              ref={(element) => { cellRefs.current.set(`${row}-${col}`, element); }}
+              tabIndex={!blocked && focused[0] === row && focused[1] === col ? 0 : -1}
+              aria-label={`Row ${row + 1}, column ${col + 1}${
+                mark === 'found' ? `, ${people[region].name} found` : MARK_LABELS[mark]}`}
               style={styles.cell(styles.REGION_COLORS[region % styles.REGION_COLORS.length], edges)}
               onClick={() => onClick(row, col)}
               onDoubleClick={() => onDoubleClick(row, col)}
+              onKeyDown={(event) => onKeyDown(event, row, col)}
+              onFocus={() => setFocused([row, col])}
+              onPointerDown={(event) => onPointerDown(event, row, col)}
+              onPointerUp={cancelPress}
+              onPointerLeave={cancelPress}
+              onPointerCancel={cancelPress}
             >
               {showPerson && <Avatar person={people[region]} missed={mark !== 'found'} />}
               {!showPerson && mark === 'x' && <span style={styles.mark}>×</span>}

@@ -2,7 +2,7 @@ import * as React from 'react';
 import {
   act, fireEvent, render, screen,
 } from '@testing-library/react';
-import Board, { CLICK_DELAY_MS } from './component';
+import Board, { CLICK_DELAY_MS, LONG_PRESS_MS } from './component';
 import { Person, Puzzle } from '../../game/types';
 
 // Person r sits in row r at column solution[r].
@@ -30,6 +30,127 @@ function doubleClick(element: HTMLElement) {
 
 beforeEach(() => jest.useFakeTimers());
 afterEach(() => jest.useRealTimers());
+
+describe('Board keyboard and touch play', () => {
+  it('Given the grid, then only one square is in the Tab order', () => {
+    startPlaying();
+    const tabbable = screen.getAllByTestId(/^cell-/).filter((el) => el.getAttribute('tabindex') === '0');
+    expect(tabbable).toEqual([cell(0, 0)]);
+  });
+
+  it('Given a focused square, when an arrow key is pressed, then focus moves to the next square and stops at the edge', () => {
+    startPlaying();
+    act(() => { cell(0, 0).focus(); });
+    fireEvent.keyDown(cell(0, 0), { key: 'ArrowRight' });
+    expect(document.activeElement).toBe(cell(0, 1));
+    fireEvent.keyDown(cell(0, 1), { key: 'ArrowDown' });
+    expect(document.activeElement).toBe(cell(1, 1));
+    fireEvent.keyDown(cell(1, 1), { key: 'ArrowUp' });
+    fireEvent.keyDown(cell(0, 1), { key: 'ArrowUp' });
+    expect(document.activeElement).toBe(cell(0, 1));
+    expect(cell(0, 1).getAttribute('tabindex')).toBe('0');
+  });
+
+  it('Given a focused square, when G is pressed, then it is a guess', () => {
+    startPlaying();
+    fireEvent.keyDown(cell(0, 0), { key: 'g' });
+    expect(cell(0, 0).getAttribute('data-mark')).toBe('found');
+    fireEvent.keyDown(cell(0, 1), { key: 'G' });
+    expect(cell(0, 1).getAttribute('data-mark')).toBe('wrong');
+  });
+
+  it('Given a marked square, then a screen reader hears its state', () => {
+    startPlaying();
+    fireEvent.click(cell(0, 1));
+    act(() => { jest.advanceTimersByTime(CLICK_DELAY_MS); });
+    expect(cell(0, 1).getAttribute('aria-label')).toBe('Row 1, column 2, marked X');
+    fireEvent.keyDown(cell(0, 0), { key: 'g' });
+    expect(cell(0, 0).getAttribute('aria-label')).toBe('Row 1, column 1, Person 0 found');
+    fireEvent.keyDown(cell(0, 2), { key: 'g' });
+    expect(cell(0, 2).getAttribute('aria-label')).toBe('Row 1, column 3, wrong guess');
+  });
+
+  it('Given a touch screen, when a square is pressed and held, then it is a guess and the tap that follows is ignored', () => {
+    startPlaying();
+    fireEvent.pointerDown(cell(0, 1), { pointerType: 'touch' });
+    act(() => { jest.advanceTimersByTime(LONG_PRESS_MS); });
+    expect(cell(0, 1).getAttribute('data-mark')).toBe('wrong');
+    fireEvent.pointerUp(cell(0, 1), { pointerType: 'touch' });
+    fireEvent.click(cell(0, 1));
+    act(() => { jest.advanceTimersByTime(CLICK_DELAY_MS); });
+    expect(cell(0, 1).getAttribute('data-mark')).toBe('wrong');
+  });
+
+  it('Given a touch screen, when a square is tapped quickly, then it is marked with an X', () => {
+    startPlaying();
+    fireEvent.pointerDown(cell(0, 1), { pointerType: 'touch' });
+    act(() => { jest.advanceTimersByTime(100); });
+    fireEvent.pointerUp(cell(0, 1), { pointerType: 'touch' });
+    fireEvent.click(cell(0, 1));
+    act(() => { jest.advanceTimersByTime(LONG_PRESS_MS + CLICK_DELAY_MS); });
+    expect(cell(0, 1).getAttribute('data-mark')).toBe('x');
+  });
+
+  it('Given a long press with no click afterwards, when another square is tapped, then that tap still marks an X', () => {
+    startPlaying();
+    fireEvent.pointerDown(cell(0, 1), { pointerType: 'touch' });
+    act(() => { jest.advanceTimersByTime(LONG_PRESS_MS); });
+    fireEvent.pointerUp(cell(0, 1), { pointerType: 'touch' });
+    fireEvent.pointerDown(cell(0, 3), { pointerType: 'touch' });
+    fireEvent.pointerUp(cell(0, 3), { pointerType: 'touch' });
+    fireEvent.click(cell(0, 3));
+    act(() => { jest.advanceTimersByTime(CLICK_DELAY_MS); });
+    expect(cell(0, 3).getAttribute('data-mark')).toBe('x');
+  });
+
+  it('Given two squares marked within the double-click window, then both get an X', () => {
+    startPlaying();
+    fireEvent.click(cell(0, 1));
+    fireEvent.click(cell(0, 3));
+    act(() => { jest.advanceTimersByTime(CLICK_DELAY_MS); });
+    expect(cell(0, 1).getAttribute('data-mark')).toBe('x');
+    expect(cell(0, 3).getAttribute('data-mark')).toBe('x');
+  });
+
+  it('Given a square marked, when G is pressed on another square straight away, then the X is kept', () => {
+    startPlaying();
+    fireEvent.click(cell(0, 1));
+    fireEvent.keyDown(cell(0, 0), { key: 'g' });
+    act(() => { jest.advanceTimersByTime(CLICK_DELAY_MS); });
+    expect(cell(0, 1).getAttribute('data-mark')).toBe('x');
+    expect(cell(0, 0).getAttribute('data-mark')).toBe('found');
+  });
+
+  it('Given Ctrl+G or Cmd+G (browser find next), then no guess is made', () => {
+    startPlaying();
+    fireEvent.keyDown(cell(0, 1), { key: 'g', ctrlKey: true });
+    fireEvent.keyDown(cell(0, 1), { key: 'g', metaKey: true });
+    expect(cell(0, 1).getAttribute('data-mark')).toBe('empty');
+  });
+
+  it('Given the how-to-play card is open, then the grid cannot be played or tabbed to', () => {
+    render(<Board puzzle={puzzle} people={people} isHost={false} onEndGame={jest.fn()} />);
+    fireEvent.keyDown(cell(0, 1), { key: 'g' });
+    fireEvent.click(cell(0, 2));
+    act(() => { jest.advanceTimersByTime(CLICK_DELAY_MS); });
+    expect(cell(0, 1).getAttribute('data-mark')).toBe('empty');
+    expect(cell(0, 2).getAttribute('data-mark')).toBe('empty');
+    expect(cell(0, 0).getAttribute('tabindex')).toBe('-1');
+  });
+
+  it('Given a mouse right-click, then the browser menu is not blocked; given a touch long press, then it is', () => {
+    startPlaying();
+    expect(fireEvent.contextMenu(cell(0, 1))).toBe(true);
+    fireEvent.pointerDown(cell(0, 1), { pointerType: 'touch' });
+    expect(fireEvent.contextMenu(cell(0, 1))).toBe(false);
+  });
+
+  it('Given the how-to-play card, then it explains keyboard and touch controls', () => {
+    render(<Board puzzle={puzzle} people={people} isHost={false} onEndGame={jest.fn()} />);
+    expect(screen.getByText(/arrow keys/i)).toBeTruthy();
+    expect(screen.getByText(/press and hold/i)).toBeTruthy();
+  });
+});
 
 describe('Board', () => {
   it('Given a hidden person whose name starts with an emoji, when revealed, then the initial is the whole emoji', () => {

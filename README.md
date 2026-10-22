@@ -5,6 +5,7 @@ A single-player logic puzzle shown in the whiteboard area. People from the meeti
 - each row, column and colour holds exactly one person
 - people never touch, not even diagonally
 - click a square to mark an X, double-click to guess
+- keyboard: arrow keys move, Space marks an X, G guesses; touch: tap marks an X, press and hold guesses
 - 3 mistakes are allowed; the 4th ends the game
 
 The presenter or a moderator starts a game from the **Apps Gallery** ("Find the People") and picks the grid size. Every participant then gets their own private copy of the same puzzle, with a "How to play" card first. **End game for everyone** puts the whiteboard back.

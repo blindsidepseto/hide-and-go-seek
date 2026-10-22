@@ -106,6 +106,9 @@ export const cell = (
   padding: 0,
   margin: 0,
   cursor: 'pointer',
+  // No double-tap zoom or long-press callout: taps and long presses are game moves.
+  touchAction: 'manipulation',
+  WebkitTouchCallout: 'none',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
