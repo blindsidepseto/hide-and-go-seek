@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { act, fireEvent, render } from '@testing-library/react';
-import PluginManager from './component';
+import PluginManager, { MAIN_AREA_ID } from './component';
 import { decodePuzzle, PUZZLE_BANK } from '../../game/puzzles';
 
 // A stand-in for the BBB client: records what the plugin registers.
@@ -390,5 +390,29 @@ describe('PluginManager', () => {
     rerender(<PluginManager pluginUuid="uuid" />);
     expect(board.textContent).toContain('Winner: Alex');
     expect(button(board, 'New game')).toBeTruthy();
+  });
+
+  it('Given the setup card and the board, then both use the same whiteboard-area id, so BBB swaps the view in place', () => {
+    // BBB 4.0 falls back to the whiteboard when one main-area item is replaced by another with a
+    // new id in one step (seen on dev-bbb: New game showed the whiteboard, not the setup card).
+    fakeApi.currentUser = { userId: 'mod1', presenter: true, role: 'MODERATOR' };
+    fakeApi.users = meetingUsers;
+    fakeApi.channelEntries = [validGame];
+    fakeApi.resultEntries = finishRun('alex', 0);
+    render(<PluginManager pluginUuid="uuid" />);
+    expect(lastCall(fakeApi.setGenericContentItems)[0].id).toBe(MAIN_AREA_ID);
+    const board = mountMainArea();
+    act(() => { fireEvent.click(button(board, 'New game')); });
+    expect(lastCall(fakeApi.setGenericContentItems)[0].id).toBe(MAIN_AREA_ID);
+    expect(button(mountMainArea(), 'Start game')).toBeTruthy();
+  });
+
+  it('Given the host opens the game from the Apps Gallery, then the whiteboard area is opened to show it', () => {
+    fakeApi.currentUser = { userId: 'mod1', presenter: true, role: 'MODERATOR' };
+    fakeApi.users = meetingUsers;
+    render(<PluginManager pluginUuid="uuid" />);
+    fakeApi.openPresentation.mockClear();
+    act(() => { lastCall(fakeApi.setAppsGalleryItems)[0].onClick(); });
+    expect(fakeApi.openPresentation).toHaveBeenCalled();
   });
 });

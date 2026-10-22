@@ -31,6 +31,12 @@ interface PluginManagerProps {
 // How long a finish waits before it can be announced, in case an earlier one is still arriving.
 const SETTLE_MS = 1500;
 
+// One fixed id for everything this plugin shows in the whiteboard area. BBB 4.0 falls back to
+// the whiteboard if one main-area item is replaced by another with a new id in a single step
+// (reproduced on dev-bbb: New game showed the whiteboard instead of the setup card). With a
+// fixed id, BBB re-renders the same item with the new view instead.
+export const MAIN_AREA_ID = 'hide-and-go-seek-main';
+
 // [DILIGENCE: GDPR] Reads participant names and avatar links so they can appear in the game.
 const USERS_SUBSCRIPTION = `
   subscription HideAndGoSeekUsers {
@@ -237,7 +243,10 @@ function PluginManager({ pluginUuid }: PluginManagerProps): React.ReactElement {
       new AppsGalleryEntry({
         name: 'Hide and Go Seek',
         icon: 'user',
-        onClick: () => setSetupOpen(true),
+        onClick: () => {
+          setSetupOpen(true);
+          pluginApi.uiCommands.presentationArea.open();
+        },
       }),
     ] : []);
   }, [isHost]);
@@ -275,6 +284,7 @@ function PluginManager({ pluginUuid }: PluginManagerProps): React.ReactElement {
     if (isHost && setupOpen) {
       pluginApi.setGenericContentItems([
         new GenericContentMainArea({
+          id: MAIN_AREA_ID,
           contentFunction: (element) => mount(
             element,
             <SetupCard
@@ -288,6 +298,7 @@ function PluginManager({ pluginUuid }: PluginManagerProps): React.ReactElement {
     } else if (game) {
       pluginApi.setGenericContentItems([
         new GenericContentMainArea({
+          id: MAIN_AREA_ID,
           contentFunction: (element) => mount(
             element,
             <Board
