@@ -16,8 +16,8 @@ import { GameState } from '../../game/types';
 import SetupCard from '../setup-card/component';
 import { eligibleUsers, MeetingUserRecord } from '../../game/people';
 import {
-  chatLineFor, everyoneOut, findWinner, finishRank, instructionsChat, NO_STANDING,
-  readResult, ResultEntry, ResultPayload,
+  acceptedResults, byTime, chatLineFor, everyoneOut, findWinner, finishRank, instructionsChat,
+  NO_STANDING, readResult, ResultEntry, ResultKind, ResultPayload,
 } from '../../game/results';
 import { createStore } from '../../game/store';
 import {
@@ -27,6 +27,9 @@ import {
 interface PluginManagerProps {
   pluginUuid: string;
 }
+
+// How long a finish waits before it can be announced, in case an earlier one is still arriving.
+const SETTLE_MS = 1500;
 
 // [DILIGENCE: GDPR] Reads participant names and avatar links so they can appear in the game.
 const USERS_SUBSCRIPTION = `
@@ -61,6 +64,8 @@ function PluginManager({ pluginUuid }: PluginManagerProps): React.ReactElement {
   );
   // [DILIGENCE: GDPR] Every player's outcomes (right, wrong, finished, out), kept on the BBB
   // server until the next game or End game clears them.
+  // [REVIEW REQUIRED] Data storage: every participant writes to this channel (pushPermission
+  // 'all'); entries are validated (acceptedResults) before they count or reach chat.
   const {
     data: resultsChannel, pushEntry: pushResult, deleteEntry: deleteResults,
   } = pluginApi.useDataChannel<ResultPayload>('results', DataChannelTypes.ALL_ITEMS);
@@ -85,14 +90,41 @@ function PluginManager({ pluginUuid }: PluginManagerProps): React.ReactElement {
 
   const userNames = new Map((users?.data?.user ?? []).map((user) => [user.userId, user.name]));
   const nameOf = (userId: string) => userNames.get(userId) ?? 'Someone';
-  const results: ResultEntry[] = (resultsChannel?.data ?? [])
+  const allResults: ResultEntry[] = (resultsChannel?.data ?? [])
     .map((entry) => ({
       entryId: entry.entryId,
       createdBy: entry.createdBy,
       createdAt: entry.createdAt,
       payload: readResult(entry.payloadJson),
     }))
-    .filter((entry) => entry.payload && entry.payload.gameKey === gameKey);
+    .filter((entry) => entry.payload);
+  const accepted = game ? acceptedResults(allResults, gameKey, game.puzzle.size) : [];
+
+  // A finish is only counted once it has been here SETTLE_MS, so a slightly earlier finish
+  // that reaches this browser a moment later still wins. Results already present when the
+  // game first loads here (e.g. after a reload) count straight away.
+  const firstSeen = useRef<{ gameKey: string; at: Map<string, number> }>({
+    gameKey: null, at: new Map(),
+  });
+  if (firstSeen.current.gameKey !== gameKey && !resultsChannel?.loading) {
+    firstSeen.current = { gameKey, at: new Map(accepted.map((entry) => [entry.entryId, 0])) };
+  }
+  const now = Date.now();
+  accepted.forEach((entry) => {
+    if (!firstSeen.current.at.has(entry.entryId)) firstSeen.current.at.set(entry.entryId, now);
+  });
+  const finishWait = Math.max(0, ...accepted
+    .filter((entry) => entry.payload.kind === 'finished')
+    .map((entry) => firstSeen.current.at.get(entry.entryId) + SETTLE_MS - now));
+  const [, setSettleTick] = useState(0);
+  useEffect(() => {
+    if (finishWait <= 0) return undefined;
+    const timer = setTimeout(() => setSettleTick((tick) => tick + 1), finishWait);
+    return () => clearTimeout(timer);
+  });
+  const results = finishWait > 0
+    ? accepted.filter((entry) => entry.payload.kind !== 'finished')
+    : accepted;
   const resultsKey = results.map((entry) => entry.entryId).join(',');
   const winnerId = gameKey ? findWinner(results, gameKey) : null;
 
@@ -117,7 +149,7 @@ function PluginManager({ pluginUuid }: PluginManagerProps): React.ReactElement {
       return;
     }
     [...results]
-      .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt))
+      .sort(byTime)
       .filter((entry) => !posted.current.ids.has(entry.entryId))
       .forEach((entry) => {
         posted.current.ids.add(entry.entryId);
@@ -131,6 +163,19 @@ function PluginManager({ pluginUuid }: PluginManagerProps): React.ReactElement {
         });
       });
   }, [isChatPoster, gameKey, resultsKey, resultsChannel?.loading]);
+
+  // Data minimisation: results from an earlier game (e.g. pushed by a board that had not yet
+  // switched to the new game) are deleted from the server by the creator's browser.
+  const staleIds = isChatPoster
+    ? allResults.filter((entry) => entry.payload.gameKey !== gameKey).map((entry) => entry.entryId)
+    : [];
+  const deleted = useRef(new Set<string>());
+  useEffect(() => {
+    const fresh = staleIds.filter((id) => !deleted.current.has(id));
+    if (fresh.length === 0 || typeof deleteResults !== 'function') return;
+    fresh.forEach((id) => deleted.current.add(id));
+    deleteResults(fresh);
+  }, [staleIds.join(',')]);
 
   // Each board saves its progress here, so re-registering the board (role change, setup card
   // opened and cancelled, avatars arriving) never resets a player's game.
@@ -156,6 +201,24 @@ function PluginManager({ pluginUuid }: PluginManagerProps): React.ReactElement {
     gameKey,
     userId: currentUser?.userId,
   };
+
+  // The SDK supplies the push function asynchronously; results made before it arrives are
+  // queued rather than crashing the board, and sent as soon as it is ready.
+  const pendingResults = useRef<ResultPayload[]>([]);
+  const flushResults = () => {
+    if (typeof live.current.pushResult !== 'function') return;
+    const queued = pendingResults.current;
+    pendingResults.current = [];
+    // [REVIEW REQUIRED] Data storage: writes this player's outcome to the shared results channel.
+    queued.forEach((payload) => live.current.pushResult(payload));
+  };
+  const reportOutcome = (key: string, kind: ResultKind, state: GameState) => {
+    pendingResults.current.push({
+      gameKey: key, kind, found: state.found, mistakes: state.mistakes,
+    });
+    flushResults();
+  };
+  useEffect(flushResults);
 
   useEffect(() => {
     pluginApi.setAppsGalleryItems(isHost ? [
@@ -224,9 +287,7 @@ function PluginManager({ pluginUuid }: PluginManagerProps): React.ReactElement {
               savedState={progress.current.get(gameKey)}
               onProgress={(state) => progress.current.set(gameKey, state)}
               standing={standing}
-              onOutcome={(kind, state) => live.current.pushResult({
-                gameKey, kind, found: state.found, mistakes: state.mistakes,
-              })}
+              onOutcome={(kind, state) => reportOutcome(gameKey, kind, state)}
               onNewGame={() => setSetupOpen(true)}
             />,
           ),

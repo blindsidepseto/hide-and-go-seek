@@ -13,7 +13,7 @@ const fakeApi = {
   setGenericContentItems: jest.fn(),
   pushEntry: jest.fn(),
   deleteEntry: jest.fn(),
-  pushResult: jest.fn(),
+  pushResult: jest.fn() as jest.Mock | undefined,
   deleteResult: jest.fn(),
   sendChat: jest.fn(),
   openPresentation: jest.fn(),
@@ -108,7 +108,14 @@ beforeEach(() => {
   fakeApi.channelEntries = [];
   fakeApi.resultEntries = [];
   fakeApi.users = [];
+  fakeApi.pushResult = jest.fn();
 });
+
+// Every result a player makes on the way to finishing: 7 correct guesses, then the finish.
+const finishRun = (by: string, firstSecond: number) => [
+  ...Array.from({ length: 7 }, (_, i) => result(`${by}-c${i}`, by, firstSecond + i, 'correct', i + 1, 0)),
+  result(`${by}-f`, by, firstSecond + 7, 'finished', 8, 0),
+];
 
 describe('PluginManager', () => {
   it('Given a viewer, then no Apps Gallery entry is added', () => {
@@ -247,13 +254,17 @@ describe('PluginManager', () => {
     fakeApi.currentUser = { userId: 'mod1', presenter: true, role: 'MODERATOR' };
     fakeApi.users = meetingUsers;
     fakeApi.channelEntries = [validGame];
+    jest.useFakeTimers();
     const { rerender } = render(<PluginManager pluginUuid="uuid" />);
-    fakeApi.resultEntries = [result('r1', 'alex', 1, 'finished', 8, 0), result('r2', 'sam', 2, 'finished', 8, 1)];
+    fakeApi.resultEntries = [...finishRun('alex', 0), ...finishRun('sam', 10)];
     rerender(<PluginManager pluginUuid="uuid" />);
-    expect(fakeApi.sendChat.mock.calls.map((call) => call[0].textMessageInMarkdownFormat)).toEqual([
+    act(() => { jest.advanceTimersByTime(2000); });
+    const lines = fakeApi.sendChat.mock.calls.map((call) => call[0].textMessageInMarkdownFormat);
+    expect(lines.filter((line: string) => line.includes('everyone'))).toEqual([
       '🏆 Alex found everyone first and wins!',
       '🎉 Sam found everyone (2nd)',
     ]);
+    jest.useRealTimers();
   });
 
   it('Given the host starts a game, then the results are cleared and the instructions are posted to chat once', () => {
@@ -273,7 +284,7 @@ describe('PluginManager', () => {
     fakeApi.currentUser = { userId: 'mod1', presenter: true, role: 'MODERATOR' };
     fakeApi.users = meetingUsers;
     fakeApi.channelEntries = [validGame];
-    fakeApi.resultEntries = [result('r1', 'alex', 1, 'finished', 8, 0)];
+    fakeApi.resultEntries = finishRun('alex', 0);
     render(<PluginManager pluginUuid="uuid" />);
     const board = mountMainArea();
     expect(board.textContent).toContain('Winner: Alex');
@@ -295,5 +306,59 @@ describe('PluginManager', () => {
     rerender(<PluginManager pluginUuid="uuid" />);
     expect(lastCall(fakeApi.setGenericContentItems)).toEqual([]);
     expect(lastCall(fakeApi.setAppsGalleryItems).map((item: { name: string }) => item.name)).toEqual(['Hide and Go Seek']);
+  });
+
+  it('Given two near-simultaneous finishes arriving in the wrong order, then only the earlier one is announced as winner', () => {
+    jest.useFakeTimers();
+    fakeApi.currentUser = { userId: 'mod1', presenter: true, role: 'MODERATOR' };
+    fakeApi.users = meetingUsers;
+    fakeApi.channelEntries = [validGame];
+    const { rerender } = render(<PluginManager pluginUuid="uuid" />);
+    const alex = finishRun('alex', 0);
+    const sam = finishRun('sam', 1);
+    // Sam's finish (later server time) arrives first; Alex's arrives half a second later.
+    fakeApi.resultEntries = [...alex.slice(0, 7), ...sam];
+    rerender(<PluginManager pluginUuid="uuid" />);
+    act(() => { jest.advanceTimersByTime(500); });
+    fakeApi.resultEntries = [...alex, ...sam];
+    rerender(<PluginManager pluginUuid="uuid" />);
+    act(() => { jest.advanceTimersByTime(2000); });
+    const wins = fakeApi.sendChat.mock.calls
+      .map((call) => call[0].textMessageInMarkdownFormat)
+      .filter((line: string) => line.includes('wins'));
+    expect(wins).toEqual(['🏆 Alex found everyone first and wins!']);
+    jest.useRealTimers();
+  });
+
+  it('Given the results channel is not ready yet, when a player guesses, then the board keeps working and the result is sent once ready', () => {
+    jest.useFakeTimers();
+    fakeApi.pushResult = undefined;
+    fakeApi.channelEntries = [validGame];
+    const { rerender } = render(<PluginManager pluginUuid="uuid" />);
+    const board = mountMainArea();
+    fireEvent.click(button(board, "Let's play"));
+    const { solution } = decodePuzzle(PUZZLE_BANK[8][0]);
+    expect(() => fireEvent.keyDown(board.querySelector(`[data-testid="cell-0-${solution[0]}"]`), { key: 'g' })).not.toThrow();
+    expect(board.querySelector(`[data-testid="cell-0-${solution[0]}"]`).getAttribute('data-mark')).toBe('found');
+    fakeApi.pushResult = jest.fn();
+    rerender(<PluginManager pluginUuid="uuid" />);
+    expect(fakeApi.pushResult).toHaveBeenCalledWith({
+      gameKey: 'e1', kind: 'correct', found: 1, mistakes: 0,
+    });
+    jest.useRealTimers();
+  });
+
+  it('Given results left over from an earlier game, then the creator deletes them from the server', () => {
+    fakeApi.currentUser = { userId: 'mod1', presenter: true, role: 'MODERATOR' };
+    fakeApi.users = meetingUsers;
+    fakeApi.channelEntries = [validGame];
+    fakeApi.resultEntries = [{
+      ...result('old1', 'alex', 1, 'correct', 1, 0),
+      payloadJson: {
+        gameKey: 'e0', kind: 'correct', found: 1, mistakes: 0,
+      },
+    }];
+    render(<PluginManager pluginUuid="uuid" />);
+    expect(fakeApi.deleteResult).toHaveBeenCalledWith(['old1']);
   });
 });

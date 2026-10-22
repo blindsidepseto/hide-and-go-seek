@@ -55,9 +55,42 @@ export interface Standing {
 export const NO_STANDING: Standing = { winnerName: null, iAmWinner: false, canStartNew: false };
 
 // Server order: earliest first, entry id as a tie-break.
-const byTime = (a: ResultEntry, b: ResultEntry) => (
+export const byTime = (a: ResultEntry, b: ResultEntry) => (
   Date.parse(a.createdAt) - Date.parse(b.createdAt) || a.entryId.localeCompare(b.entryId)
 );
+
+// [REVIEW REQUIRED] Integrity: anyone can write to the results channel. Only results that are
+// a legal next step for that player count: found or wrong guesses go up by exactly one, a
+// finish needs everyone found, being out needs MAX_MISTAKES wrong guesses, and nothing counts
+// after a player has finished or is out. So a reload cannot restart a player, a finished player
+// cannot win twice, and one player can cause at most size + MAX_MISTAKES chat lines per game.
+export function acceptedResults(
+  entries: ResultEntry[],
+  gameKey: string,
+  size: number,
+): ResultEntry[] {
+  const players = new Map<string, { found: number; mistakes: number; done: boolean }>();
+  return entries
+    .filter((entry) => entry.payload.gameKey === gameKey)
+    .sort(byTime)
+    .filter((entry) => {
+      const state = players.get(entry.createdBy) ?? { found: 0, mistakes: 0, done: false };
+      const { kind, found, mistakes } = entry.payload;
+      const nextFound = found === state.found + 1 && mistakes === state.mistakes;
+      const nextMistake = mistakes === state.mistakes + 1 && found === state.found;
+      const legal = !state.done && (
+        (kind === 'correct' && nextFound && found < size)
+        || (kind === 'finished' && nextFound && found === size)
+        || (kind === 'wrong' && nextMistake && mistakes < MAX_MISTAKES)
+        || (kind === 'out' && nextMistake && mistakes === MAX_MISTAKES));
+      if (legal) {
+        players.set(entry.createdBy, {
+          found, mistakes, done: kind === 'finished' || kind === 'out',
+        });
+      }
+      return legal;
+    });
+}
 
 function finishers(entries: ResultEntry[], gameKey: string): string[] {
   const order: string[] = [];

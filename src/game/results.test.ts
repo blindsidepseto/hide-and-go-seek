@@ -1,6 +1,6 @@
 import {
-  chatLineFor, escapeMarkdown, everyoneOut, finishRank, findWinner, instructionsChat,
-  outcomeForChange, readResult, ResultEntry,
+  acceptedResults, byTime, chatLineFor, escapeMarkdown, everyoneOut, finishRank, findWinner,
+  instructionsChat, outcomeForChange, readResult, ResultEntry,
 } from './results';
 import { createGame, guess } from './rules';
 import { Puzzle } from './types';
@@ -141,5 +141,62 @@ describe('chat lines', () => {
     expect(text).toMatch(/double-click/i);
     expect(text).toMatch(/3 wrong guesses/);
     expect(text).toMatch(/first/i);
+  });
+});
+
+describe('acceptedResults', () => {
+  // A result with explicit counts; createdAt seconds give server order.
+  const r = (id: string, by: string, second: number, kind: string, found: number, mistakes: number, gameKey = 'g1') => ({
+    entryId: id,
+    createdBy: by,
+    createdAt: `2026-10-22T10:00:${String(second).padStart(2, '0')}Z`,
+    payload: {
+      gameKey, kind, found, mistakes,
+    },
+  } as ResultEntry);
+  const ids = (entries: ResultEntry[]) => entries.map((e) => e.entryId);
+
+  it('Given a player is out, when they reload and keep playing, then nothing after "out" counts and they cannot win', () => {
+    const entries = [
+      r('1', 'sam', 1, 'wrong', 0, 1), r('2', 'sam', 2, 'wrong', 0, 2), r('3', 'sam', 3, 'out', 0, 3),
+      // after a reload: a fresh board starts from zero
+      r('4', 'sam', 4, 'correct', 1, 0), r('5', 'sam', 5, 'finished', 8, 0),
+    ];
+    const accepted = acceptedResults(entries, 'g1', 8);
+    expect(ids(accepted)).toEqual(['1', '2', '3']);
+    expect(findWinner(accepted, 'g1')).toBeNull();
+  });
+
+  it('Given a player finished, when they finish again after a reload, then only the first finish counts', () => {
+    const entries = [
+      ...Array.from({ length: 7 }, (_, i) => r(`c${i}`, 'alex', i, 'correct', i + 1, 0)),
+      r('f1', 'alex', 10, 'finished', 8, 0),
+      r('c-again', 'alex', 11, 'correct', 1, 0),
+      r('f2', 'alex', 20, 'finished', 8, 0),
+    ];
+    const accepted = acceptedResults(entries, 'g1', 8);
+    expect(ids(accepted).filter((id) => id.startsWith('f'))).toEqual(['f1']);
+    expect(ids(accepted)).not.toContain('c-again');
+  });
+
+  it('Given faked or repeated results, then only legal next steps are accepted, so one player cannot flood chat', () => {
+    const spam = Array.from({ length: 50 }, (_, i) => r(`w${i}`, 'eve', i, 'wrong', 0, 999));
+    const repeats = Array.from({ length: 50 }, (_, i) => r(`k${i}`, 'kai', i, 'correct', 1, 0));
+    const accepted = acceptedResults([...spam, ...repeats], 'g1', 8);
+    expect(ids(accepted)).toEqual(['k0']);
+  });
+
+  it('Given a finish without having found everyone, then it is not accepted', () => {
+    expect(acceptedResults([r('f', 'eve', 1, 'finished', 8, 0)], 'g1', 8)).toEqual([]);
+  });
+
+  it('Given results for another game, then they are left out', () => {
+    expect(acceptedResults([r('1', 'alex', 1, 'correct', 1, 0, 'old')], 'g1', 8)).toEqual([]);
+  });
+
+  it('Given equal times, then server order falls back to the entry id', () => {
+    const a = r('a', 'x', 1, 'correct', 1, 0);
+    const b = r('b', 'y', 1, 'correct', 1, 0);
+    expect([b, a].sort(byTime).map((e) => e.entryId)).toEqual(['a', 'b']);
   });
 });
