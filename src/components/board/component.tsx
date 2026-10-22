@@ -39,7 +39,10 @@ function initials(name: string): string {
 }
 
 function Avatar({ person, missed }: { person: Person; missed: boolean }) {
-  const style = { ...styles.avatar(person.color || '#7a869a'), ...(missed ? styles.missedAvatar : {}) };
+  const style = {
+    ...styles.avatar(person.color || styles.COLORS.genericAvatar),
+    ...(missed ? styles.missedAvatar : {}),
+  };
   if (person.avatar) {
     return (
       <img
@@ -207,6 +210,7 @@ function Board({
 
   return (
     <div style={styles.area}>
+      <style>{styles.FOCUS_CSS}</style>
       <div style={styles.header}>
         <span>{`Found ${game.found} / ${size}`}</span>
         <span>{`Wrong guesses: ${game.mistakes} of ${MAX_MISTAKES}`}</span>
@@ -241,6 +245,7 @@ function Board({
               key={`${row}-${col}`}
               type="button"
               data-testid={`cell-${row}-${col}`}
+              className="hgs-cell"
               data-mark={mark}
               ref={(element) => { cellRefs.current.set(`${row}-${col}`, element); }}
               tabIndex={!blocked && focused[0] === row && focused[1] === col ? 0 : -1}
@@ -262,7 +267,12 @@ function Board({
                   <path d="M1.5 1.5 L8.5 8.5 M8.5 1.5 L1.5 8.5" />
                 </svg>
               )}
-              {!showPerson && mark === 'wrong' && <span style={styles.wrongMark}>✕</span>}
+              {!showPerson && mark === 'wrong' && (
+                <svg data-testid="wrong-mark" viewBox="0 0 10 10" aria-hidden="true" style={styles.wrongMark}>
+                  <circle cx="5" cy="5" r="4.2" />
+                  <path d="M3.2 3.2 L6.8 6.8 M6.8 3.2 L3.2 6.8" />
+                </svg>
+              )}
             </button>
           );
         }))}

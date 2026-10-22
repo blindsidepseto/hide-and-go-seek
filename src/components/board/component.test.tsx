@@ -238,3 +238,38 @@ describe('Board', () => {
     expect(screen.queryByRole('button', { name: 'End game for everyone' })).toBeNull();
   });
 });
+
+describe('Board accessibility of marks and avatars', () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  it('Given a wrong guess, then its mark has a different shape from the X (not colour alone)', () => {
+    startPlaying();
+    doubleClick(cell(0, 1));
+    const wrong = cell(0, 1).querySelector('[data-testid="wrong-mark"]');
+    expect(wrong).toBeTruthy();
+    expect(wrong.querySelector('circle')).toBeTruthy();
+  });
+
+  it('Given an avatar without a picture, then its initials use a colour with at least 4.5:1 contrast', () => {
+    render(<Board puzzle={puzzle} people={people.map((p) => ({ ...p, color: '#7a869a' }))} isHost={false} onEndGame={jest.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: "Let's play" }));
+    doubleClick(cell(0, 0));
+    const initials = screen.getByTitle('Person 0');
+    expect(initials.style.color).toBe('rgb(0, 0, 0)');
+  });
+
+  it('Given the board, then squares get a visible keyboard focus style', () => {
+    startPlaying();
+    expect(cell(0, 0).className).toContain('hgs-cell');
+    expect(document.head.innerHTML + document.body.innerHTML).toContain('.hgs-cell:focus-visible');
+  });
+
+  it('Given the game ends, then people the player missed are outlined, not faded', () => {
+    startPlaying();
+    [1, 2, 3].forEach((col) => doubleClick(cell(0, col)));
+    const missed = screen.getByTitle('Person 1');
+    expect(missed.style.opacity).toBe('');
+    expect(missed.style.outline).toContain('dashed');
+  });
+});

@@ -1,7 +1,25 @@
 import { CSSProperties } from 'react';
+import { readableTextColor } from '../game/contrast';
 
-// Pastel region colours, distinct enough for 15 regions. Region borders back them up
-// for players who cannot tell colours apart.
+// All colours are checked against WCAG 2.1 AA in styles.test.ts:
+// text >= 4.5:1 (1.4.3); marks, borders and focus ring >= 3:1 against every region (1.4.11).
+export const COLORS = {
+  text: '#1f2937',
+  pageBackground: '#f5f6f8',
+  cardBackground: '#ffffff',
+  primary: '#0f70d7',
+  primaryText: '#ffffff',
+  secondary: '#e5e7eb',
+  regionBorder: '#1f2937',
+  xMark: '#374151',
+  wrongMark: '#7f1d1d',
+  focusRing: '#000000',
+  focusRingInner: '#ffffff',
+  genericAvatar: '#7a869a',
+};
+
+// Pastel region colours. Regions are also separated by thick borders, so colour is never the
+// only cue (WCAG 1.4.1); AA does not require region colours to contrast with each other.
 export const REGION_COLORS = [
   '#f4a7a7', '#a7c7f4', '#b5e3a1', '#f7d59c', '#d3b4ef',
   '#9fe0db', '#f5b8de', '#d9d9d9', '#e8e39a', '#c2a58f',
@@ -16,16 +34,16 @@ export const area: CSSProperties = {
   flexDirection: 'column',
   alignItems: 'center',
   justifyContent: 'center',
-  background: '#f5f6f8',
+  background: COLORS.pageBackground,
   fontFamily: 'inherit',
-  color: '#1f2937',
+  color: COLORS.text,
   boxSizing: 'border-box',
   padding: 12,
   overflow: 'hidden',
 };
 
 export const card: CSSProperties = {
-  background: '#ffffff',
+  background: COLORS.cardBackground,
   borderRadius: 12,
   boxShadow: '0 6px 24px rgba(0,0,0,0.18)',
   padding: '20px 24px',
@@ -60,9 +78,13 @@ const button: CSSProperties = {
   border: 'none', borderRadius: 6, padding: '8px 14px', fontSize: 14, cursor: 'pointer',
 };
 
-export const primaryButton: CSSProperties = { ...button, background: '#0f70d7', color: '#ffffff' };
+export const primaryButton: CSSProperties = {
+  ...button, background: COLORS.primary, color: COLORS.primaryText,
+};
 
-export const secondaryButton: CSSProperties = { ...button, background: '#e5e7eb', color: '#1f2937' };
+export const secondaryButton: CSSProperties = {
+  ...button, background: COLORS.secondary, color: COLORS.text,
+};
 
 export const header: CSSProperties = {
   display: 'flex',
@@ -75,7 +97,7 @@ export const header: CSSProperties = {
 };
 
 export const helpButton: CSSProperties = {
-  ...button, borderRadius: '50%', width: 30, height: 30, padding: 0, background: '#e5e7eb', fontWeight: 700,
+  ...button, borderRadius: '50%', width: 30, height: 30, padding: 0, background: COLORS.secondary, fontWeight: 700,
 };
 
 export const grid = (size: number): CSSProperties => ({
@@ -85,12 +107,12 @@ export const grid = (size: number): CSSProperties => ({
   aspectRatio: '1 / 1',
   height: 'calc(100% - 48px)',
   maxWidth: '100%',
-  border: '3px solid #1f2937',
-  background: '#1f2937',
+  border: `3px solid ${COLORS.regionBorder}`,
+  background: COLORS.regionBorder,
   userSelect: 'none',
 });
 
-const regionEdge = '3px solid #1f2937';
+const regionEdge = `3px solid ${COLORS.regionBorder}`;
 const innerEdge = '1px solid rgba(31, 41, 55, 0.25)';
 
 export const cell = (
@@ -121,24 +143,35 @@ export const cell = (
 export const xMark: CSSProperties = {
   width: '72%',
   height: '72%',
-  stroke: '#374151',
+  stroke: COLORS.xMark,
   strokeWidth: 1.4,
   strokeLinecap: 'round',
   fill: 'none',
 };
 
-export const mark: CSSProperties = {
-  fontSize: 'min(3vh, 22px)', fontWeight: 700, color: '#374151', lineHeight: 1,
+// A circled X, so a wrong guess differs from an X mark by shape, not only colour.
+export const wrongMark: CSSProperties = {
+  width: '72%',
+  height: '72%',
+  stroke: COLORS.wrongMark,
+  strokeWidth: 1.2,
+  strokeLinecap: 'round',
+  fill: 'none',
 };
 
-export const wrongMark: CSSProperties = { ...mark, color: '#dc2626', fontSize: 'min(4vh, 28px)' };
+// Keyboard focus: black outer ring and white inner ring, visible on any region and its border.
+export const FOCUS_CSS = `.hgs-cell:focus-visible {
+  outline: 3px solid ${COLORS.focusRing};
+  outline-offset: -3px;
+  box-shadow: inset 0 0 0 6px ${COLORS.focusRingInner};
+}`;
 
 export const avatar = (color: string): CSSProperties => ({
   width: '82%',
   height: '82%',
   borderRadius: '50%',
   background: color,
-  color: '#ffffff',
+  color: readableTextColor(color),
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -148,4 +181,8 @@ export const avatar = (color: string): CSSProperties => ({
   boxShadow: '0 0 0 2px #ffffff',
 });
 
-export const missedAvatar: CSSProperties = { opacity: 0.55 };
+// People the player did not find: a dashed outline rather than fading, so initials keep 4.5:1.
+export const missedAvatar: CSSProperties = {
+  outline: `2px dashed ${COLORS.text}`,
+  outlineOffset: 1,
+};
