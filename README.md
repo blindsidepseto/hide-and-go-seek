@@ -28,7 +28,7 @@ Each event has its own short sound, generated in the browser (no sound files): m
 
 ## Compatibility
 
-Built for **BigBlueButton 4.0.0**, which requires plugin SDK `1.0.0-beta.3` (`html5PluginSdkVersion` in `bigbluebutton.properties`). The 4.0 release candidates used SDK 0.1.x and are not supported.
+Built for **BigBlueButton 4.0.0 and 4.1** (plugin SDK `1.0.0-beta.3`, `html5PluginSdkVersion` in `bigbluebutton.properties`). The manifest accepts any SDK in the range `^1.0.0-beta.3`: later 1.0.0 pre-releases, 1.0.0 and later 1.x. BBB refuses it on other major lines, including the 0.1.x SDK used by the 4.0 release candidates and by the stale `v4.1.x-release` branch.
 
 ## Privacy
 

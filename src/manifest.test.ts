@@ -22,3 +22,25 @@ describe('manifest.json', () => {
     });
   });
 });
+
+describe('manifest requiredSdkVersion', () => {
+  // BBB checks this with npm-style semver rules (akka-bbb-apps .../core/util/SemverRange.scala,
+  // identical in v4.0.x-release and v4.1.x-develop); npm's semver package follows the same rules.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
+  const semver = require('semver');
+  const range = manifest.requiredSdkVersion;
+
+  it('Given the SDK of BBB 4.0.0 and 4.1-develop, or any later 1.x SDK, then the plugin loads', () => {
+    ['1.0.0-beta.3', '1.0.0-beta.4', '1.0.0-rc.1', '1.0.0', '1.3.2']
+      .forEach((version) => {
+        expect({ version, ok: semver.satisfies(version, range) }).toEqual({ version, ok: true });
+      });
+  });
+
+  it('Given an SDK from another major line, an older beta, or an unrelated pre-release, then the plugin is refused', () => {
+    ['2.0.0', '0.1.26', '0.1.20', '1.0.0-beta.2', '1.1.0-alpha.1']
+      .forEach((version) => {
+        expect({ version, ok: semver.satisfies(version, range) }).toEqual({ version, ok: false });
+      });
+  });
+});
