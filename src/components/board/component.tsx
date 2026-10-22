@@ -4,6 +4,9 @@ import {
 } from 'react';
 import { createGame, guess, toggleMark } from '../../game/rules';
 import {
+  createSoundPlayer, loadMuted, PlaySound, saveMuted, soundForChange,
+} from '../../game/sounds';
+import {
   GameState, MAX_MISTAKES, Person, Puzzle,
 } from '../../game/types';
 import * as styles from '../styles';
@@ -13,6 +16,8 @@ export const CLICK_DELAY_MS = 250;
 
 // On touch screens, pressing and holding a square this long is a guess.
 export const LONG_PRESS_MS = 500;
+
+const defaultPlaySound = createSoundPlayer();
 
 const MOVES: Record<string, [number, number]> = {
   ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1],
@@ -30,6 +35,8 @@ interface BoardProps {
   // Progress from an earlier mount of this same game, and a callback to save it.
   savedState?: GameState;
   onProgress?: (state: GameState) => void;
+  // Plays a game sound; replaceable in tests.
+  playSound?: PlaySound;
 }
 
 function initials(name: string): string {
@@ -115,7 +122,7 @@ function EndScreen({
 }
 
 function Board({
-  puzzle, people, isHost, onEndGame, savedState, onProgress,
+  puzzle, people, isHost, onEndGame, savedState, onProgress, playSound,
 }: BoardProps): React.ReactElement {
   const [game, setGame] = useState<GameState>(() => savedState ?? createGame(puzzle));
   const [showHelp, setShowHelp] = useState(!savedState);
@@ -135,7 +142,21 @@ function Board({
     clearTimeout(pressTimer.current);
   }, []);
 
-  useEffect(() => { onProgress?.(game); }, [game]);
+  const [muted, setMuted] = useState(loadMuted);
+  // The last state a sound was decided for; starts at the restored state so nothing replays.
+  const heard = useRef(game);
+
+  useEffect(() => {
+    onProgress?.(game);
+    const sound = soundForChange(heard.current, game);
+    heard.current = game;
+    if (sound && !muted) playSound(sound);
+  }, [game]);
+
+  const toggleMute = () => {
+    saveMuted(!muted);
+    setMuted(!muted);
+  };
 
   // The grid is not playable while the how-to-play card covers it.
   const blocked = showHelp;
@@ -215,6 +236,15 @@ function Board({
         <span>{`Found ${game.found} / ${size}`}</span>
         <span>{`Wrong guesses: ${game.mistakes} of ${MAX_MISTAKES}`}</span>
         <button type="button" aria-label="How to play" onClick={() => setShowHelp(true)} style={styles.helpButton}>?</button>
+        <button
+          type="button"
+          aria-label={muted ? 'Unmute sounds' : 'Mute sounds'}
+          aria-pressed={muted}
+          onClick={toggleMute}
+          style={styles.helpButton}
+        >
+          {muted ? '🔇' : '🔊'}
+        </button>
         {isHost && (
           <button type="button" onClick={onEndGame} style={styles.secondaryButton}>End game for everyone</button>
         )}
@@ -293,6 +323,7 @@ function Board({
 Board.defaultProps = {
   savedState: undefined,
   onProgress: undefined,
+  playSound: defaultPlaySound,
 };
 
 export default Board;

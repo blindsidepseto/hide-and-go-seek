@@ -273,3 +273,70 @@ describe('Board accessibility of marks and avatars', () => {
     expect(missed.style.outline).toContain('dashed');
   });
 });
+
+describe('Board sounds', () => {
+  const playerProps = () => ({
+    puzzle, people, isHost: false, onEndGame: jest.fn(),
+  });
+
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  function playWithSound() {
+    const playSound = jest.fn();
+    render(
+      <Board {...playerProps()} playSound={playSound} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: "Let's play" }));
+    return playSound;
+  }
+
+  it('Given a player marks, unmarks, guesses right and wrong, then each plays its own sound', () => {
+    const playSound = playWithSound();
+    fireEvent.click(cell(0, 1));
+    act(() => { jest.advanceTimersByTime(CLICK_DELAY_MS); });
+    fireEvent.click(cell(0, 1));
+    act(() => { jest.advanceTimersByTime(CLICK_DELAY_MS); });
+    doubleClick(cell(0, 0));
+    doubleClick(cell(0, 2));
+    expect(playSound.mock.calls.map((call) => call[0])).toEqual(['mark', 'unmark', 'correct', 'wrong']);
+  });
+
+  it('Given 2 wrong guesses, when a 3rd is made, then the out sound plays', () => {
+    const playSound = playWithSound();
+    [1, 2, 3].forEach((col) => doubleClick(cell(0, col)));
+    expect(playSound).toHaveBeenLastCalledWith('out');
+  });
+
+  it('Given mute is pressed, then no sounds play until it is pressed again', () => {
+    const playSound = playWithSound();
+    fireEvent.click(screen.getByRole('button', { name: 'Mute sounds' }));
+    doubleClick(cell(0, 1));
+    expect(playSound).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Unmute sounds' }));
+    doubleClick(cell(0, 2));
+    expect(playSound).toHaveBeenCalledWith('wrong');
+  });
+
+  it('Given a board restored from saved progress, then no sounds replay', () => {
+    const playSound = jest.fn();
+    const { unmount } = render(
+      <Board {...playerProps()} playSound={playSound} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: "Let's play" }));
+    doubleClick(cell(0, 1));
+    unmount();
+    playSound.mockClear();
+    render(<Board
+      puzzle={puzzle}
+      people={people}
+      isHost={false}
+      onEndGame={jest.fn()}
+      playSound={playSound}
+      savedState={{
+        solution: puzzle.solution, marks: Array.from({ length: 8 }, () => Array(8).fill('empty')), mistakes: 1, found: 0, status: 'playing',
+      }}
+    />);
+    expect(playSound).not.toHaveBeenCalled();
+  });
+});
