@@ -49,13 +49,13 @@ describe('game rules', () => {
     expect(toggleMark(wrong, 0, 1)).toBe(wrong);
   });
 
-  it('Given 3 mistakes, then the game is still playing; when a 4th wrong guess is made, then the game is lost', () => {
+  it('Given 2 wrong guesses, then the game is still playing; when a 3rd is made, then the player is out', () => {
     let game = createGame(puzzle);
-    [1, 2, 3].forEach((c) => { game = guess(game, 0, c); });
-    expect(game.mistakes).toBe(3);
+    [1, 2].forEach((c) => { game = guess(game, 0, c); });
+    expect(game.mistakes).toBe(2);
     expect(game.status).toBe('playing');
-    game = guess(game, 0, 4);
-    expect(game.mistakes).toBe(4);
+    game = guess(game, 0, 3);
+    expect(game.mistakes).toBe(3);
     expect(game.status).toBe('lost');
   });
 
@@ -68,7 +68,7 @@ describe('game rules', () => {
 
   it('Given a finished game, when the player clicks or guesses, then nothing changes', () => {
     let game = createGame(puzzle);
-    [1, 2, 3, 4].forEach((c) => { game = guess(game, 0, c); });
+    [1, 2, 3].forEach((c) => { game = guess(game, 0, c); });
     expect(game.status).toBe('lost');
     expect(guess(game, 0, 0)).toBe(game);
     expect(toggleMark(game, 1, 1)).toBe(game);

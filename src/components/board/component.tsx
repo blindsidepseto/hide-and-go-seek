@@ -73,7 +73,7 @@ function HowToPlay({ onClose }: { onClose: () => void }) {
             {' '}
             a square when you think someone is there.
           </li>
-          <li>{`You can make ${MAX_MISTAKES} mistakes. The next one ends the game.`}</li>
+          <li>{`You are out after ${MAX_MISTAKES} wrong guesses.`}</li>
         </ul>
         <p>
           Keyboard: arrow keys to move, Space to mark an X, G to guess.
@@ -209,7 +209,7 @@ function Board({
     <div style={styles.area}>
       <div style={styles.header}>
         <span>{`Found ${game.found} / ${size}`}</span>
-        <span>{`Mistakes left: ${Math.max(MAX_MISTAKES - game.mistakes, 0)}`}</span>
+        <span>{`Wrong guesses: ${game.mistakes} of ${MAX_MISTAKES}`}</span>
         <button type="button" aria-label="How to play" onClick={() => setShowHelp(true)} style={styles.helpButton}>?</button>
         {isHost && (
           <button type="button" onClick={onEndGame} style={styles.secondaryButton}>End game for everyone</button>

@@ -170,11 +170,11 @@ describe('Board', () => {
     expect(screen.getByRole('dialog', { name: 'How to play' })).toBeTruthy();
   });
 
-  it('Given a new game, then no people are shown and the header shows 0 found and 3 mistakes left', () => {
+  it('Given a new game, then no people are shown and the header shows 0 found and 0 of 3 wrong guesses', () => {
     startPlaying();
     expect(screen.queryByText('Person 0')).toBeNull();
     expect(screen.getByText('Found 0 / 8')).toBeTruthy();
-    expect(screen.getByText('Mistakes left: 3')).toBeTruthy();
+    expect(screen.getByText('Wrong guesses: 0 of 3')).toBeTruthy();
   });
 
   it('Given a square, when single-clicked, then an X appears after the double-click window', () => {
@@ -210,12 +210,12 @@ describe('Board', () => {
     startPlaying();
     doubleClick(cell(0, 1));
     expect(cell(0, 1).getAttribute('data-mark')).toBe('wrong');
-    expect(screen.getByText('Mistakes left: 2')).toBeTruthy();
+    expect(screen.getByText('Wrong guesses: 1 of 3')).toBeTruthy();
   });
 
-  it('Given 3 mistakes, when a 4th wrong guess is made, then the game is over and everyone is revealed', () => {
+  it('Given 2 wrong guesses, when a 3rd is made, then the game is over and everyone is revealed', () => {
     startPlaying();
-    [1, 2, 3, 4].forEach((col) => doubleClick(cell(0, col)));
+    [1, 2, 3].forEach((col) => doubleClick(cell(0, col)));
     expect(screen.getByRole('dialog', { name: 'Game over' })).toBeTruthy();
     people.forEach((person) => expect(screen.getByTitle(person.name)).toBeTruthy());
   });

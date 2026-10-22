@@ -43,6 +43,6 @@ export function guess(state: GameState, row: number, col: number): GameState {
     ...state,
     marks: withMark(state, row, col, 'wrong'),
     mistakes,
-    status: mistakes > MAX_MISTAKES ? 'lost' : 'playing',
+    status: mistakes >= MAX_MISTAKES ? 'lost' : 'playing',
   };
 }

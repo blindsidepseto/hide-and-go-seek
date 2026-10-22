@@ -1,5 +1,6 @@
 export const MIN_SIZE = 8;
 export const MAX_SIZE = 15;
+// The player is out on this many wrong guesses.
 export const MAX_MISTAKES = 3;
 
 // A hidden person. `avatar` is an image URL, or '' when the person has none.
