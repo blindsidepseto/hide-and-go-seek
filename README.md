@@ -16,7 +16,7 @@ Built for **BigBlueButton 4.0.0**, which requires plugin SDK `1.0.0-beta.3` (`ht
 ## Privacy
 
 - Starting a game writes the chosen participants' names and avatar links to the plugin's `game` data channel. BBB keeps that entry on its server, and sends it to anyone who joins later, until **End game for everyone** clears it or a new game replaces it.
-- Who can appear is decided once, when the game starts. If the moderator has hidden the user list at that point, only moderators can appear; everyone else is a made-up person. Bots and people who have already left are never used.
+- People are picked from the user list of whoever starts the game, even if the moderator has hidden the user list. Bots and people who have already left are never used. While the list is hidden, BBB may give students (including a student presenter) a shorter list, so a student-started game may hold fewer real people. Students may also see classmates as initials instead of avatars, because an avatar is only shown when it appears in their own list. (Not yet checked on a live BBB 4.0 server.)
 - An avatar is only shown if it matches the link BBB itself reports for that user, so a game cannot make participants' browsers load images from other servers.
 - The plugin sends nothing outside BBB.
 

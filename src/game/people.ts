@@ -11,18 +11,15 @@ export interface MeetingUser {
 
 // A user record as returned by the plugin's GraphQL `user` subscription.
 export interface MeetingUserRecord extends MeetingUser {
-  isModerator: boolean;
   bot: boolean;
   currentlyInMeeting: boolean;
 }
 
-// [REVIEW REQUIRED] Access control: names and avatars chosen here are sent to every participant.
-// When the moderator hides the user list, students may only see moderators, so only
-// moderators are eligible — otherwise the game would reveal classmates the lock hides.
-export function eligibleUsers(users: MeetingUserRecord[], userListHidden: boolean): MeetingUser[] {
+// [REVIEW REQUIRED] Access control: names and avatars chosen here are sent to every
+// participant, even when the moderator has hidden the user list (product decision 2026-10-21).
+export function eligibleUsers(users: MeetingUserRecord[]): MeetingUser[] {
   return users
     .filter((user) => user.currentlyInMeeting && !user.bot)
-    .filter((user) => !userListHidden || user.isModerator)
     .map(({
       userId, name, avatar, color,
     }) => ({

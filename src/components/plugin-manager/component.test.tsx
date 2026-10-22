@@ -21,7 +21,6 @@ jest.mock('bigbluebutton-html-plugin-sdk', () => ({
     getPluginApi: () => ({
       useCurrentUser: () => ({ loading: false, data: fakeApi.currentUser }),
       useCustomSubscription: () => ({ loading: false, data: { user: fakeApi.users } }),
-      useMeetingData: () => ({ loading: false, data: { lockSettings: { hideUserList: false } } }),
       useDataChannel: () => ({
         data: { loading: false, data: fakeApi.channelEntries },
         pushEntry: fakeApi.pushEntry,
@@ -134,7 +133,7 @@ describe('PluginManager', () => {
     const { rerender } = render(<PluginManager pluginUuid="uuid" />);
     const calls = fakeApi.setGenericContentItems.mock.calls.length;
     fakeApi.users = [{
-      userId: 'newcomer', name: 'N', avatar: 'https://bbb.example/n.png', color: '', isModerator: false, bot: false, currentlyInMeeting: true,
+      userId: 'newcomer', name: 'N', avatar: 'https://bbb.example/n.png', color: '', bot: false, currentlyInMeeting: true,
     }];
     rerender(<PluginManager pluginUuid="uuid" />);
     expect(fakeApi.setGenericContentItems.mock.calls.length).toBe(calls);

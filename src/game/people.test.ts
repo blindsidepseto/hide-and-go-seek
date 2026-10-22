@@ -50,24 +50,20 @@ describe('selectPeople', () => {
 describe('eligibleUsers', () => {
   const meeting = [
     {
-      userId: 'm1', name: 'Teacher', avatar: '', color: '', isModerator: true, bot: false, currentlyInMeeting: true,
+      userId: 'm1', name: 'Teacher', avatar: '', color: '', bot: false, currentlyInMeeting: true,
     },
     {
-      userId: 'v1', name: 'Student', avatar: '', color: '', isModerator: false, bot: false, currentlyInMeeting: true,
+      userId: 'v1', name: 'Student', avatar: '', color: '', bot: false, currentlyInMeeting: true,
     },
     {
-      userId: 'v2', name: 'Left early', avatar: '', color: '', isModerator: false, bot: false, currentlyInMeeting: false,
+      userId: 'v2', name: 'Left early', avatar: '', color: '', bot: false, currentlyInMeeting: false,
     },
     {
-      userId: 'b1', name: 'Recorder', avatar: '', color: '', isModerator: false, bot: true, currentlyInMeeting: true,
+      userId: 'b1', name: 'Recorder', avatar: '', color: '', bot: true, currentlyInMeeting: true,
     },
   ];
 
-  it('Given the user list is visible to everyone, then present non-bot users are eligible', () => {
-    expect(eligibleUsers(meeting, false).map((u) => u.userId)).toEqual(['m1', 'v1']);
-  });
-
-  it('Given the moderator has hidden the user list, then only moderators are eligible, so students are not exposed', () => {
-    expect(eligibleUsers(meeting, true).map((u) => u.userId)).toEqual(['m1']);
+  it('Given moderators, viewers, a bot and someone who left, then present non-bot users are eligible', () => {
+    expect(eligibleUsers(meeting).map((u) => u.userId)).toEqual(['m1', 'v1']);
   });
 });

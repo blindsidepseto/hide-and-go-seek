@@ -8,7 +8,6 @@ import {
   BbbPluginSdk,
   DataChannelTypes,
   GenericContentMainArea,
-  MeetingData,
   PluginApi,
   RESET_DATA_CHANNEL,
 } from 'bigbluebutton-html-plugin-sdk';
@@ -32,17 +31,11 @@ const USERS_SUBSCRIPTION = `
       name
       avatar
       color
-      isModerator
       bot
       currentlyInMeeting
     }
   }
 `;
-
-// Defined once: the SDK re-projects whenever this function changes identity.
-const projectLock = (meeting: MeetingData) => ({
-  lockSettings: { hideUserList: meeting.lockSettings?.hideUserList },
-});
 
 function mount(element: HTMLElement, content: React.ReactElement): ReactDOM.Root {
   const root = ReactDOM.createRoot(element);
@@ -57,7 +50,6 @@ function PluginManager({ pluginUuid }: PluginManagerProps): React.ReactElement {
   const currentUser = pluginApi.useCurrentUser()?.data;
   const isHost = canHostGame(currentUser);
   const users = pluginApi.useCustomSubscription<{ user: MeetingUserRecord[] }>(USERS_SUBSCRIPTION);
-  const lock = pluginApi.useMeetingData(projectLock);
   const { data: channel, pushEntry, deleteEntry } = pluginApi.useDataChannel<GamePayload>(
     'game',
     DataChannelTypes.LATEST_ITEM,
@@ -65,8 +57,6 @@ function PluginManager({ pluginUuid }: PluginManagerProps): React.ReactElement {
   const [setupOpen, setSetupOpen] = useState(false);
 
   const usersReady = !!users && !users.loading && !!users.data;
-  // Fails closed: until the lock setting has loaded, treat the user list as hidden.
-  const userListHidden = lock?.data?.lockSettings?.hideUserList !== false;
 
   // Each data-channel entry is one game; its server-assigned entryId is the game's key.
   const latest = channel?.data?.[0];
@@ -90,11 +80,10 @@ function PluginManager({ pluginUuid }: PluginManagerProps): React.ReactElement {
   // The setup card and board are mounted in their own React roots, so they read the latest
   // values through refs rather than re-registering (which would reset a player's progress).
   const live = useRef({
-    users: [] as MeetingUserRecord[], userListHidden: true, pushEntry, deleteEntry, gameKey,
+    users: [] as MeetingUserRecord[], pushEntry, deleteEntry, gameKey,
   });
   live.current = {
     users: users?.data?.user ?? [],
-    userListHidden,
     pushEntry,
     deleteEntry,
     gameKey,
@@ -120,8 +109,7 @@ function PluginManager({ pluginUuid }: PluginManagerProps): React.ReactElement {
 
   useEffect(() => {
     const startGame = (size: number) => {
-      const { users: all, userListHidden: hidden } = live.current;
-      const people = eligibleUsers(all, hidden);
+      const people = eligibleUsers(live.current.users);
       // [REVIEW REQUIRED] Data storage: writes participants' names and avatar links to the
       // meeting's shared data channel, kept on the BBB server until End game resets it.
       const previous = live.current.gameKey;
