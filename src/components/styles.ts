@@ -16,6 +16,8 @@ export const COLORS = {
   focusRing: '#000000',
   focusRingInner: '#ffffff',
   genericAvatar: '#7a869a',
+  // Outer ring round every avatar, so placeholder avatars stand out on any region colour.
+  avatarOutline: '#1f2937',
 };
 
 // Region colours, chosen so every pair differs by at least 18 (CIEDE2000; the previous pastel set
@@ -147,7 +149,7 @@ export const xMark: CSSProperties = {
   width: '72%',
   height: '72%',
   stroke: COLORS.xMark,
-  strokeWidth: 1.4,
+  strokeWidth: 1.8,
   strokeLinecap: 'round',
   fill: 'none',
 };
@@ -157,7 +159,7 @@ export const wrongMark: CSSProperties = {
   width: '72%',
   height: '72%',
   stroke: COLORS.wrongMark,
-  strokeWidth: 1.2,
+  strokeWidth: 1.8,
   strokeLinecap: 'round',
   fill: 'none',
 };
@@ -181,7 +183,8 @@ export const avatar = (color: string): CSSProperties => ({
   fontWeight: 700,
   fontSize: 'min(2.2vh, 16px)',
   objectFit: 'cover',
-  boxShadow: '0 0 0 2px #ffffff',
+  // White inner ring separates the avatar from its dark outer ring.
+  boxShadow: `0 0 0 2px #ffffff, 0 0 0 4px ${COLORS.avatarOutline}`,
 });
 
 // People the player did not find: a dashed outline rather than fading, so initials keep 4.5:1.
