@@ -27,7 +27,9 @@ export function readableTextColor(background: string): string {
 
 // CIE L*a*b* (D65) for an sRGB hex colour.
 export function toLab(hex: string): [number, number, number] {
-  const [r, g, b] = (channels(hex) ?? [0, 0, 0])
+  const parsed = channels(hex);
+  if (!parsed) throw new Error(`Not a hex colour: ${hex}`);
+  const [r, g, b] = parsed
     .map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
   const f = (t: number) => (t > 216 / 24389 ? Math.cbrt(t) : ((24389 / 27) * t + 16) / 116);
   const x = f((0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047);

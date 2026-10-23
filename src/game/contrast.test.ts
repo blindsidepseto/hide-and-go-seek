@@ -1,5 +1,5 @@
 import {
-  contrastRatio, deltaE2000, deltaE2000Lab, readableTextColor,
+  contrastRatio, deltaE2000, deltaE2000Lab, readableTextColor, toLab,
 } from './contrast';
 import { createRng } from './rng';
 
@@ -43,5 +43,12 @@ describe('deltaE2000 (CIEDE2000 colour difference)', () => {
   it('Given the same colour twice, then there is no difference; given black and white, then it is large', () => {
     expect(deltaE2000('#a59687', '#a59687')).toBeCloseTo(0, 6);
     expect(deltaE2000('#000000', '#ffffff')).toBeGreaterThan(99);
+  });
+});
+
+describe('toLab', () => {
+  it('Given a malformed colour, then it fails loudly instead of treating it as black', () => {
+    expect(() => toLab('#e1e1c')).toThrow();
+    expect(() => toLab('pink')).toThrow();
   });
 });

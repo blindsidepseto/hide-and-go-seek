@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { act, fireEvent, render } from '@testing-library/react';
-import PluginManager, { MAIN_AREA_ID } from './component';
+import PluginManager, { mainAreaId } from './component';
 import { decodePuzzle, PUZZLE_BANK } from '../../game/puzzles';
 
 // A stand-in for the BBB client: records what the plugin registers.
@@ -400,11 +400,15 @@ describe('PluginManager', () => {
     fakeApi.channelEntries = [validGame];
     fakeApi.resultEntries = finishRun('alex', 0);
     render(<PluginManager pluginUuid="uuid" />);
-    expect(lastCall(fakeApi.setGenericContentItems)[0].id).toBe(MAIN_AREA_ID);
+    expect(lastCall(fakeApi.setGenericContentItems)[0].id).toBe(mainAreaId('uuid'));
     const board = mountMainArea();
     act(() => { fireEvent.click(button(board, 'New game')); });
-    expect(lastCall(fakeApi.setGenericContentItems)[0].id).toBe(MAIN_AREA_ID);
+    expect(lastCall(fakeApi.setGenericContentItems)[0].id).toBe(mainAreaId('uuid'));
     expect(button(mountMainArea(), 'Start game')).toBeTruthy();
+  });
+
+  it('Given two copies of the plugin, then their whiteboard-area ids differ, so they cannot hide each other', () => {
+    expect(mainAreaId('uuid-a')).not.toBe(mainAreaId('uuid-b'));
   });
 
   it('Given the host opens the game from the Apps Gallery, then the whiteboard area is opened to show it', () => {
