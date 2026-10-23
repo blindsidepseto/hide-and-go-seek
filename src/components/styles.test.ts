@@ -25,6 +25,12 @@ describe('board colours meet WCAG 2.1 AA', () => {
     expect(contrastRatio(COLORS.focusRing, COLORS.gridLine)).toBeGreaterThanOrEqual(NON_TEXT_MIN);
   });
 
+  it('Given the focus ring, then its white inner ring separates it from the dark marks inside the square', () => {
+    [COLORS.xMarkEdge, COLORS.avatarOutline].forEach((dark) => {
+      expect(contrastRatio(COLORS.focusRingInner, dark)).toBeGreaterThanOrEqual(NON_TEXT_MIN);
+    });
+  });
+
   const textPairs: [string, string, string][] = [
     ['header text on page background', COLORS.text, COLORS.pageBackground],
     ['card text on card', COLORS.text, COLORS.cardBackground],
@@ -61,7 +67,7 @@ describe('marks and avatars stand out on every region', () => {
     expect(contrastRatio(COLORS.xMark, COLORS.xMarkEdge)).toBeGreaterThanOrEqual(3);
   });
 
-  // User decision (2026-10-23): one uniform white grid, no separate block borders. Blocks are
+  // User decision (2026-10-22): one uniform white grid, no separate block borders. Blocks are
   // then told apart by colour only, so the board does not meet WCAG 1.4.1 / AODA.
   it('Given the grid, then the outer border and every line between squares are white and the same thickness', () => {
     expect(COLORS.gridLine).toBe('#ffffff');
