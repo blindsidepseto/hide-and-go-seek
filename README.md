@@ -23,8 +23,8 @@ Each event has its own short sound, generated in the browser (no sound files): m
 ## Accessibility
 
 - **Not AODA-compliant, by decision (2026-10-22).** The board is one uniform white grid with no separate border between people's blocks, so blocks are told apart by colour only. That fails WCAG 1.4.1 "Use of Color" (Level A), which AODA requires (WCAG 2.0 Level AA, O. Reg. 191/11, s. 14). Colour-blind players, and anyone looking at the palest blocks, may not see where one block ends. To restore compliance, bring back a non-colour cue for block edges (e.g. darker block borders).
-- Also below WCAG 2.1 AA, as a result: the white grid lines are now the only edge of each square, and they are under 3:1 on pale blocks (as low as 1.3:1), so the edges of squares (which are buttons) can be hard to see (WCAG 1.4.11 non-text contrast; whether it applies to these edges is a judgement call). The X's white centre is under 3:1 on pale blocks too, but its dark edge carries the contrast.
-- Checked by `src/components/styles.test.ts`: text at least 4.5:1; the wrong-guess mark, the dark edge of the white X, avatar outlines and the focus ring at least 3:1 against every block colour.
+- Also below WCAG 2.1 AA, as a result: the white grid lines are now the only edge of each square, and they are under 3:1 on pale blocks (as low as 1.3:1), so the edges of squares (which are buttons) can be hard to see (WCAG 1.4.11 non-text contrast; whether it applies to these edges is a judgement call). The X is solid white with no border (user decision, 2026-10-22), so it is also under 3:1 on pale blocks.
+- Checked by `src/components/styles.test.ts`: text at least 4.5:1; the wrong-guess mark, avatar outlines and the focus ring at least 3:1 against every block colour.
 - Other marks don't rely on colour: a wrong guess (circled X) differs from an X mark by shape, and people a player missed have a dashed outline instead of a solid one.
 - The 15 block colours are chosen to be as different as possible: every pair is at least 18 apart on the CIEDE2000 scale (tested; 19.4 today), and touching blocks get the most different ones, at least 21 apart (tested; 22–26 at worst today, by grid size). With 15 colours some pairs stay closer than others, especially for colour-blind players.
 - Full keyboard play with a visible focus ring; each square announces its state to screen readers.
@@ -46,6 +46,14 @@ Built for **BigBlueButton 4.0.0 and 4.1** (plugin SDK `1.0.0-beta.3`, `html5Plug
 - Chat volume: every guess by every player is a chat line, roughly 300 lines for 30 students in one game. Each player can cause at most grid size + 3 lines per game: a result only counts if it moves that player forward.
 - If the game creator leaves mid-game, chat announcements stop for that game. Another moderator can start a new game.
 - Any participant can write to the results channel, so a technically skilled student could fake a finish by sending a believable sequence of results. The chat shows the real sender's name. A player who is out, or has already finished, can't come back by reloading the page. A player who reloads mid-game starts a fresh board; their results count again once they pass their earlier progress.
+
+## Dark mode
+
+BBB's dark theme recolours the page, but it leaves SVG drawings alone. The white grid lines, the block colours and the X are drawn as SVG, so they look the same in light and dark mode.
+
+## Releases
+
+Bump `version` in `package.json` for each release. The build copies it into `dist/manifest.json`, and BBB adds it to the plugin's script address (`?version=…`), so browsers load the new file instead of a cached one.
 
 ## Development
 

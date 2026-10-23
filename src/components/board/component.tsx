@@ -298,6 +298,9 @@ function Board({
           }
         }}
       >
+        <svg data-testid="grid-lines" aria-hidden="true" style={styles.svgLayer}>
+          <rect width="100%" height="100%" fill={styles.COLORS.gridLine} />
+        </svg>
         {regions.map((cells, row) => cells.map((region, col) => {
           const mark = game.marks[row][col];
           const hasPerson = solution[row] === col;
@@ -314,7 +317,7 @@ function Board({
               tabIndex={!blocked && focused[0] === row && focused[1] === col ? 0 : -1}
               aria-label={`Row ${row + 1}, column ${col + 1}${
                 mark === 'found' ? `, ${people[region].name} found` : MARK_LABELS[mark]}`}
-              style={styles.cell(regionColors[region])}
+              style={styles.cell()}
               onClick={() => onClick(row, col)}
               onDoubleClick={() => onDoubleClick(row, col)}
               onKeyDown={(event) => onKeyDown(event, row, col)}
@@ -324,10 +327,12 @@ function Board({
               onPointerLeave={cancelPress}
               onPointerCancel={cancelPress}
             >
+              <svg data-testid="cell-fill" aria-hidden="true" style={styles.svgLayer}>
+                <rect width="100%" height="100%" fill={regionColors[region]} />
+              </svg>
               {showPerson && <Avatar person={people[region]} missed={mark !== 'found'} />}
               {!showPerson && mark === 'x' && (
                 <svg data-testid="x-mark" viewBox="0 0 10 10" aria-hidden="true" style={styles.xMark}>
-                  <path d={xCross} style={styles.xMarkEdge} />
                   <path d={xCross} style={styles.xMarkFill} />
                 </svg>
               )}

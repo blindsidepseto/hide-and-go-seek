@@ -44,3 +44,16 @@ describe('manifest requiredSdkVersion', () => {
       });
   });
 });
+
+describe('plugin version', () => {
+  // The build copies package.json's version into the manifest; BBB adds it to the script URL as
+  // ?version=..., so browsers fetch the new file after each release. BBB ignores invalid versions.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
+  const semver = require('semver');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require, import/extensions
+  const { version } = require('../package.json');
+
+  it('Given package.json, then its version is valid semver, so BBB uses it to refresh browser caches', () => {
+    expect(semver.valid(version)).toBe(version);
+  });
+});

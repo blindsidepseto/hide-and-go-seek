@@ -1,6 +1,12 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const path = require('path');
+// eslint-disable-next-line import/extensions
+const { version } = require('./package.json');
+
+// Cache-busting: BBB adds ?version=<manifest version> to the plugin's script URL
+// (akka-bbb-apps Plugins.scala, createFinalJavascriptEntrypointUrl), so browsers fetch the new
+// file after each release instead of a cached copy. The version comes from package.json.
 
 module.exports = {
   entry: './src/index.tsx',
@@ -59,7 +65,14 @@ module.exports = {
   plugins: [
     new CopyWebpackPlugin({
       patterns: [
-        { from: 'manifest.json', to: './' }, // Copy manifest.json to static/ in the output folder
+        {
+          from: 'manifest.json',
+          to: './',
+          transform: (content) => {
+            const manifest = JSON.parse(content.toString());
+            return `${JSON.stringify({ ...manifest, version }, null, 2)}\n`;
+          },
+        },
       ],
     }),
   ],

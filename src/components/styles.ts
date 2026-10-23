@@ -1,10 +1,10 @@
 import { CSSProperties } from 'react';
 import { readableTextColor } from '../game/contrast';
 
-// Colours are checked in styles.test.ts: text >= 4.5:1 (WCAG 1.4.3); the X's dark edge, the
-// wrong-guess mark, avatar outlines and the focus ring >= 3:1 against every region colour
-// (1.4.11). Two white elements are deliberately not: the X's white centre (its dark edge carries
-// the contrast) and the white grid lines. User decision (2026-10-22): one uniform white grid
+// Colours are checked in styles.test.ts: text >= 4.5:1 (WCAG 1.4.3); the wrong-guess mark,
+// avatar outlines and the focus ring >= 3:1 against every region colour (1.4.11). Two white
+// elements are deliberately not (user decisions, 2026-10-22): the solid white X and the white
+// grid lines. User decision (2026-10-22): one uniform white grid
 // with no separate block borders, so blocks are told apart by colour only; the board does not
 // meet WCAG 1.4.1 and so is not AODA-compliant.
 const DARK = '#1f2937';
@@ -17,10 +17,8 @@ export const COLORS = {
   primary: '#0f70d7',
   primaryText: WHITE,
   secondary: '#e5e7eb',
-  // White X with a dark edge: the edge keeps >= 3:1 against every region colour, where plain
-  // white would be as low as 1.3:1 on the palest ones.
+  // Solid white X, no border (user decision 2026-10-22; under 3:1 on the palest blocks).
   xMark: WHITE,
-  xMarkEdge: DARK,
   // Every grid line, including the outer border.
   gridLine: WHITE,
   wrongMark: '#7f1d1d',
@@ -124,21 +122,36 @@ export const helpButton: CSSProperties = {
 export const GRID_LINE_PX = 2;
 
 export const grid = (size: number): CSSProperties => ({
+  position: 'relative',
   display: 'grid',
   gridTemplateColumns: `repeat(${size}, 1fr)`,
   gridTemplateRows: `repeat(${size}, 1fr)`,
   gap: `${GRID_LINE_PX}px`,
+  padding: GRID_LINE_PX,
   aspectRatio: '1 / 1',
   height: 'calc(100% - 48px)',
   maxWidth: '100%',
-  border: `${GRID_LINE_PX}px solid ${COLORS.gridLine}`,
-  background: COLORS.gridLine,
+  boxSizing: 'border-box',
+  background: 'transparent',
   userSelect: 'none',
 });
 
-export const cell = (color: string): CSSProperties => ({
+// BBB's dark theme (DarkReader) recolours colours set on HTML elements but leaves SVG alone, so
+// the white grid lines and the block colours are SVG layers: they look the same in light and dark
+// mode. Both fill their box and ignore the pointer.
+export const svgLayer: CSSProperties = {
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  width: '100%',
+  height: '100%',
+  pointerEvents: 'none',
+};
+
+// The square's colour is drawn by an SVG layer inside it (see svgLayer).
+export const cell = (): CSSProperties => ({
   position: 'relative',
-  background: color,
+  background: 'transparent',
   border: 'none',
   padding: 0,
   margin: 0,
@@ -156,18 +169,14 @@ export const cell = (color: string): CSSProperties => ({
 
 // Marks are drawn in a 10 x 10 box and scale with the square: a little smaller than an
 // avatar (82%). Geometry is checked in styles.test.ts (round stroke ends stay in the box).
-// The X is drawn twice: a wider dark edge, then the white X on top.
-export const X_MARK = { inset: 1.8, stroke: 1.8, edgeStroke: 3.2 };
+export const X_MARK = { inset: 1.5, stroke: 1.8 };
 
 export const xMark: CSSProperties = {
+  position: 'relative',
   width: '72%',
   height: '72%',
   strokeLinecap: 'round',
   fill: 'none',
-};
-
-export const xMarkEdge: CSSProperties = {
-  stroke: COLORS.xMarkEdge, strokeWidth: X_MARK.edgeStroke,
 };
 
 export const xMarkFill: CSSProperties = { stroke: COLORS.xMark, strokeWidth: X_MARK.stroke };
@@ -177,6 +186,7 @@ export const xMarkFill: CSSProperties = { stroke: COLORS.xMark, strokeWidth: X_M
 export const WRONG_MARK = { radius: 4.1, arm: 1.4 };
 
 export const wrongMark: CSSProperties = {
+  position: 'relative',
   width: '72%',
   height: '72%',
   stroke: COLORS.wrongMark,
@@ -187,16 +197,25 @@ export const wrongMark: CSSProperties = {
 
 // Keyboard focus: black outer ring (stands out on the white grid lines and every block colour)
 // and a white inner ring (separates it from the dark X edge and avatar outlines inside the square).
+// The inner ring is a pseudo-element on top, since the square's SVG colour layer would cover an
+// inset box-shadow.
 export const FOCUS_CSS = `.hgs-cell:focus-visible {
   outline: 3px solid ${COLORS.focusRing};
   outline-offset: -3px;
-  box-shadow: inset 0 0 0 6px ${COLORS.focusRingInner};
+}
+.hgs-cell:focus-visible::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border: 3px solid ${COLORS.focusRingInner};
+  pointer-events: none;
 }`;
 
 // Frame round an avatar: the outline is a border inside the frame, so it is never clipped by
 // the square. Missed people (shown at game end) get a dashed outline, found people a solid one;
 // nothing is faded, so initials keep 4.5:1.
 export const avatarFrame = (missed: boolean): CSSProperties => ({
+  position: 'relative',
   width: '82%',
   height: '82%',
   boxSizing: 'border-box',

@@ -1,6 +1,6 @@
 {
   "name": "bbb-plugin-hide-and-go-seek",
-  "version": "0.0.1",
+  "version": "0.2.5-beta.1",
   "private": true,
   "main": "./src/index.tsx",
   "dependencies": {

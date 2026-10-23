@@ -450,14 +450,23 @@ describe('Board in a shared race', () => {
 });
 
 describe('Board region colours', () => {
-  it('Given a puzzle, then each square is painted with the colour assigned to its region', () => {
+  // BBB's dark theme (DarkReader) recolours inline colours on HTML elements but leaves SVG alone,
+  // so block colours and grid lines are drawn as SVG to stay exactly as set in dark mode.
+  it('Given a puzzle, then each square is painted, as SVG, with the colour assigned to its region', () => {
     render(<Board puzzle={puzzle} people={people} isHost={false} onEndGame={jest.fn()} />);
     const colors = assignRegionColors(puzzle.regions, REGION_COLORS);
-    const probe = document.createElement('div');
     [[0, 0], [3, 5], [7, 7]].forEach(([row, col]) => {
-      probe.style.background = colors[puzzle.regions[row][col]];
-      expect(cell(row, col).style.background).toBe(probe.style.background);
+      const fill = cell(row, col).querySelector('[data-testid="cell-fill"] rect');
+      expect(fill.getAttribute('fill')).toBe(colors[puzzle.regions[row][col]]);
+      expect(cell(row, col).style.background).toBe('transparent');
     });
+  });
+
+  it('Given the board, then the white grid lines are drawn as SVG behind the squares', () => {
+    render(<Board puzzle={puzzle} people={people} isHost={false} onEndGame={jest.fn()} />);
+    const lines = screen.getByTestId('grid-lines');
+    expect(lines.tagName.toLowerCase()).toBe('svg');
+    expect(lines.querySelector('rect').getAttribute('fill')).toBe(COLORS.gridLine);
   });
 });
 
@@ -465,16 +474,12 @@ describe('Board X mark', () => {
   beforeEach(() => jest.useFakeTimers());
   afterEach(() => jest.useRealTimers());
 
-  it('Given a square marked X, then the X is drawn white over a dark edge', () => {
+  it('Given a square marked X, then the X is solid white with no border', () => {
     startPlaying();
     fireEvent.click(cell(0, 1));
     act(() => { jest.advanceTimersByTime(CLICK_DELAY_MS); });
     const paths = [...cell(0, 1).querySelectorAll('[data-testid="x-mark"] path')] as SVGPathElement[];
-    expect(paths).toHaveLength(2);
-    const white = ['#ffffff', 'rgb(255, 255, 255)'];
-    expect(white).toContain(paths[1].style.stroke.toLowerCase());
-    // The edge is drawn first (underneath), in the dark edge colour, and wider than the white.
-    expect(paths[0].style.stroke.toLowerCase()).toBe(COLORS.xMarkEdge);
-    expect(Number(paths[0].style.strokeWidth)).toBeGreaterThan(Number(paths[1].style.strokeWidth));
+    expect(paths).toHaveLength(1);
+    expect(['#ffffff', 'rgb(255, 255, 255)']).toContain(paths[0].style.stroke.toLowerCase());
   });
 });

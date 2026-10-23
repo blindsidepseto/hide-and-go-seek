@@ -9,7 +9,6 @@ const NON_TEXT_MIN = 3;
 
 describe('board colours meet WCAG 2.1 AA', () => {
   const marksOnSquares: [string, string][] = [
-    ['X mark dark edge', COLORS.xMarkEdge],
     ['wrong-guess mark', COLORS.wrongMark],
     ['focus ring', COLORS.focusRing],
   ];
@@ -26,7 +25,7 @@ describe('board colours meet WCAG 2.1 AA', () => {
   });
 
   it('Given the focus ring, then its white inner ring separates it from the dark marks inside the square', () => {
-    [COLORS.xMarkEdge, COLORS.avatarOutline].forEach((dark) => {
+    [COLORS.avatarOutline].forEach((dark) => {
       expect(contrastRatio(COLORS.focusRingInner, dark)).toBeGreaterThanOrEqual(NON_TEXT_MIN);
     });
   });
@@ -57,27 +56,28 @@ describe('region colours are easy to tell apart', () => {
 
 describe('marks and avatars stand out on every region', () => {
   // Marks are drawn in a 10 x 10 box; strokes have round ends that reach stroke/2 past a line.
-  it('Given the X mark, then it is a bold white X with a wider dark edge whose ends stay inside its box', () => {
+  // User decision (2026-10-22): a solid white X with no border.
+  it('Given the X mark, then it is a bold, solid white X whose ends stay inside its box', () => {
     expect(COLORS.xMark).toBe('#ffffff');
     expect(X_MARK.stroke).toBeGreaterThanOrEqual(1.6);
-    // At least 0.7 of the 10-unit box on each side: ~0.85px even on a 15x15 board in a small area.
-    expect((X_MARK.edgeStroke - X_MARK.stroke) / 2).toBeGreaterThanOrEqual(0.7);
-    expect(X_MARK.inset - X_MARK.edgeStroke / 2).toBeGreaterThanOrEqual(0);
-    // The white shows clearly against its own dark edge.
-    expect(contrastRatio(COLORS.xMark, COLORS.xMarkEdge)).toBeGreaterThanOrEqual(3);
+    expect(X_MARK.inset - X_MARK.stroke / 2).toBeGreaterThanOrEqual(0);
   });
 
   // User decision (2026-10-22): one uniform white grid, no separate block borders. Blocks are
   // then told apart by colour only, so the board does not meet WCAG 1.4.1 / AODA.
   it('Given the grid, then the outer border and every line between squares are white and the same thickness', () => {
     expect(COLORS.gridLine).toBe('#ffffff');
+    // The white comes from an SVG backdrop (see Board); the HTML grid itself is transparent so
+    // BBB's dark theme has no colour to change. Padding = the outer border, gap = the lines.
     const style = grid(10);
-    expect(style.border).toBe(`${GRID_LINE_PX}px solid ${COLORS.gridLine}`);
+    expect(style.padding).toBe(GRID_LINE_PX);
     expect(style.gap).toBe(`${GRID_LINE_PX}px`);
-    expect(style.background).toBe(COLORS.gridLine);
+    expect(style.background).toBe('transparent');
+    expect(style.border).toBeUndefined();
     // Squares draw no borders of their own (the white gap is the line), so no line differs.
-    const square = cell('#e1e1c3');
+    const square = cell();
     expect(square.border).toBe('none');
+    expect(square.background).toBe('transparent');
     ['borderTop', 'borderRight', 'borderBottom', 'borderLeft']
       .forEach((side) => expect(square[side as keyof typeof square]).toBeUndefined());
   });
