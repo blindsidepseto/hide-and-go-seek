@@ -6,7 +6,7 @@ import Board, { CLICK_DELAY_MS, LONG_PRESS_MS } from './component';
 import { Person, Puzzle } from '../../game/types';
 import { createStore } from '../../game/store';
 import { assignRegionColors } from '../../game/region-colors';
-import { REGION_COLORS } from '../styles';
+import { COLORS, REGION_COLORS } from '../styles';
 
 // Person r sits in row r at column solution[r].
 const puzzle: Puzzle = {
@@ -473,6 +473,8 @@ describe('Board X mark', () => {
     expect(paths).toHaveLength(2);
     const white = ['#ffffff', 'rgb(255, 255, 255)'];
     expect(white).toContain(paths[1].style.stroke.toLowerCase());
-    expect(white).not.toContain(paths[0].style.stroke.toLowerCase());
+    // The edge is drawn first (underneath), in the dark edge colour, and wider than the white.
+    expect(paths[0].style.stroke.toLowerCase()).toBe(COLORS.xMarkEdge);
+    expect(Number(paths[0].style.strokeWidth)).toBeGreaterThan(Number(paths[1].style.strokeWidth));
   });
 });

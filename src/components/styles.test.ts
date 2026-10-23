@@ -56,19 +56,30 @@ describe('marks and avatars stand out on every region', () => {
   it('Given the X mark, then it is a bold white X with a wider dark edge whose ends stay inside its box', () => {
     expect(COLORS.xMark).toBe('#ffffff');
     expect(X_MARK.stroke).toBeGreaterThanOrEqual(1.6);
-    expect(X_MARK.edgeStroke - X_MARK.stroke).toBeGreaterThanOrEqual(0.8);
+    // At least 0.7 of the 10-unit box on each side: ~0.85px even on a 15x15 board in a small area.
+    expect((X_MARK.edgeStroke - X_MARK.stroke) / 2).toBeGreaterThanOrEqual(0.7);
     expect(X_MARK.inset - X_MARK.edgeStroke / 2).toBeGreaterThanOrEqual(0);
     // The white shows clearly against its own dark edge.
     expect(contrastRatio(COLORS.xMark, COLORS.xMarkEdge)).toBeGreaterThanOrEqual(3);
   });
 
-  it('Given the grid, then the thin lines between squares are white and the block borders stay dark', () => {
-    const style = cell('#e1e1c3', {
-      top: true, right: false, bottom: false, left: false,
-    });
-    expect(String(style.borderTop)).toContain(COLORS.regionBorder);
-    expect(String(style.borderRight)).toContain(COLORS.gridLine);
+  it('Given the grid, then the thin lines between squares are white and the block borders stay dark, on every side', () => {
     expect(COLORS.gridLine).toBe('#ffffff');
+    const sides = ['borderTop', 'borderRight', 'borderBottom', 'borderLeft'] as const;
+    const inside = cell('#e1e1c3', {
+      top: false, right: false, bottom: false, left: false,
+    });
+    const corner = cell('#e1e1c3', {
+      top: true, right: true, bottom: true, left: true,
+    });
+    sides.forEach((side) => {
+      expect(String(inside[side])).toContain(COLORS.gridLine);
+      expect(String(corner[side])).toContain(COLORS.regionBorder);
+    });
+  });
+
+  it('Given the dark colours, then the X edge matches the block borders', () => {
+    expect(COLORS.xMarkEdge).toBe(COLORS.regionBorder);
   });
 
   it('Given the wrong-guess mark, then it is bold, the circle fits its box, and the X inside clearly does not touch the circle', () => {

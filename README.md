@@ -23,7 +23,7 @@ Each event has its own short sound, generated in the browser (no sound files): m
 ## Accessibility
 
 - Built to **WCAG 2.1 AA**, which covers the **AODA** requirement (WCAG 2.0 Level AA for public websites, Integrated Accessibility Standards, O. Reg. 191/11, s. 14).
-- Colours: text at least 4.5:1; region borders, marks, avatar outlines and the focus ring at least 3:1 against every region colour. Automated tests (`src/components/styles.test.ts`) check every pair.
+- Colours: text at least 4.5:1; block borders, the wrong-guess mark, the dark edge of the white X, avatar outlines and the focus ring at least 3:1 against every block colour. Automated tests (`src/components/styles.test.ts`) check every pair. Two white elements don't reach 3:1 on pale blocks, by design: the centre of the X (its dark edge carries the contrast) and the thin lines between squares inside a block, which are decoration (the dark block borders carry the meaning).
 - Colour is never the only cue (WCAG 1.4.1): regions are separated by thick borders, a wrong guess (circled X) differs from an X mark by shape, and people a player missed have a dashed outline instead of a solid one.
 - The 15 region colours are chosen to be as different as possible (every pair at least 19 apart on the CIEDE2000 scale), and touching regions get the most different ones. With 15 colours some pairs stay closer than others, especially for colour-blind players, which is why the borders carry the meaning.
 - Full keyboard play with a visible focus ring; each square announces its state to screen readers.
