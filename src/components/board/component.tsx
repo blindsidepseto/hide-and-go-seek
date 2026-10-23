@@ -333,7 +333,8 @@ function Board({
               {showPerson && <Avatar person={people[region]} missed={mark !== 'found'} />}
               {!showPerson && mark === 'x' && (
                 <svg data-testid="x-mark" viewBox="0 0 10 10" aria-hidden="true" style={styles.xMark}>
-                  <path d={xCross} />
+                  <path d={xCross} style={styles.xMarkEdge} />
+                  <path d={xCross} style={styles.xMarkFill} />
                 </svg>
               )}
               {!showPerson && mark === 'wrong' && (

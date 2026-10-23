@@ -1,6 +1,6 @@
 import { contrastRatio, deltaE2000 } from '../game/contrast';
 import {
-  avatarFrame, COLORS, REGION_COLORS, WRONG_MARK, wrongMark, X_MARK, xMark,
+  avatarFrame, cell, COLORS, REGION_COLORS, WRONG_MARK, wrongMark, X_MARK,
 } from './styles';
 
 // WCAG 2.1 AA: 1.4.3 text >= 4.5:1, 1.4.11 graphical objects and UI component boundaries >= 3:1.
@@ -10,7 +10,7 @@ const NON_TEXT_MIN = 3;
 describe('board colours meet WCAG 2.1 AA', () => {
   const marksOnSquares: [string, string][] = [
     ['region border', COLORS.regionBorder],
-    ['X mark', COLORS.xMark],
+    ['X mark dark edge', COLORS.xMarkEdge],
     ['wrong-guess mark', COLORS.wrongMark],
     ['focus ring', COLORS.focusRing],
   ];
@@ -53,10 +53,22 @@ describe('region colours are easy to tell apart', () => {
 
 describe('marks and avatars stand out on every region', () => {
   // Marks are drawn in a 10 x 10 box; strokes have round ends that reach stroke/2 past a line.
-  it('Given the X mark, then it is bold (stroke >= 1.6) and its ends stay inside its box', () => {
-    const stroke = Number(xMark.strokeWidth);
-    expect(stroke).toBeGreaterThanOrEqual(1.6);
-    expect(X_MARK.inset - stroke / 2).toBeGreaterThanOrEqual(0);
+  it('Given the X mark, then it is a bold white X with a wider dark edge whose ends stay inside its box', () => {
+    expect(COLORS.xMark).toBe('#ffffff');
+    expect(X_MARK.stroke).toBeGreaterThanOrEqual(1.6);
+    expect(X_MARK.edgeStroke - X_MARK.stroke).toBeGreaterThanOrEqual(0.8);
+    expect(X_MARK.inset - X_MARK.edgeStroke / 2).toBeGreaterThanOrEqual(0);
+    // The white shows clearly against its own dark edge.
+    expect(contrastRatio(COLORS.xMark, COLORS.xMarkEdge)).toBeGreaterThanOrEqual(3);
+  });
+
+  it('Given the grid, then the thin lines between squares are white and the block borders stay dark', () => {
+    const style = cell('#e1e1c3', {
+      top: true, right: false, bottom: false, left: false,
+    });
+    expect(String(style.borderTop)).toContain(COLORS.regionBorder);
+    expect(String(style.borderRight)).toContain(COLORS.gridLine);
+    expect(COLORS.gridLine).toBe('#ffffff');
   });
 
   it('Given the wrong-guess mark, then it is bold, the circle fits its box, and the X inside clearly does not touch the circle', () => {

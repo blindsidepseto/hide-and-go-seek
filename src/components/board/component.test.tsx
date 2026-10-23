@@ -460,3 +460,19 @@ describe('Board region colours', () => {
     });
   });
 });
+
+describe('Board X mark', () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  it('Given a square marked X, then the X is drawn white over a dark edge', () => {
+    startPlaying();
+    fireEvent.click(cell(0, 1));
+    act(() => { jest.advanceTimersByTime(CLICK_DELAY_MS); });
+    const paths = [...cell(0, 1).querySelectorAll('[data-testid="x-mark"] path')] as SVGPathElement[];
+    expect(paths).toHaveLength(2);
+    const white = ['#ffffff', 'rgb(255, 255, 255)'];
+    expect(white).toContain(paths[1].style.stroke.toLowerCase());
+    expect(white).not.toContain(paths[0].style.stroke.toLowerCase());
+  });
+});

@@ -11,7 +11,12 @@ export const COLORS = {
   primaryText: '#ffffff',
   secondary: '#e5e7eb',
   regionBorder: '#1f2937',
-  xMark: '#374151',
+  // White X with a dark edge: the edge keeps >= 3:1 against every region colour, where plain
+  // white would be as low as 1.3:1 on the palest ones.
+  xMark: '#ffffff',
+  xMarkEdge: '#1f2937',
+  // Thin lines between squares inside a block; block borders stay dark (WCAG 1.4.1).
+  gridLine: '#ffffff',
   wrongMark: '#7f1d1d',
   focusRing: '#000000',
   focusRingInner: '#ffffff',
@@ -120,7 +125,7 @@ export const grid = (size: number): CSSProperties => ({
 });
 
 const regionEdge = `3px solid ${COLORS.regionBorder}`;
-const innerEdge = '1px solid rgba(31, 41, 55, 0.25)';
+const innerEdge = `1px solid ${COLORS.gridLine}`;
 
 export const cell = (
   color: string,
@@ -148,16 +153,21 @@ export const cell = (
 
 // Marks are drawn in a 10 x 10 box and scale with the square: a little smaller than an
 // avatar (82%). Geometry is checked in styles.test.ts (round stroke ends stay in the box).
-export const X_MARK = { inset: 1.5 };
+// The X is drawn twice: a wider dark edge, then the white X on top.
+export const X_MARK = { inset: 1.5, stroke: 1.8, edgeStroke: 2.8 };
 
 export const xMark: CSSProperties = {
   width: '72%',
   height: '72%',
-  stroke: COLORS.xMark,
-  strokeWidth: 1.8,
   strokeLinecap: 'round',
   fill: 'none',
 };
+
+export const xMarkEdge: CSSProperties = {
+  stroke: COLORS.xMarkEdge, strokeWidth: X_MARK.edgeStroke,
+};
+
+export const xMarkFill: CSSProperties = { stroke: COLORS.xMark, strokeWidth: X_MARK.stroke };
 
 // A circled X, so a wrong guess differs from an X mark by shape, not only colour.
 // The circle and the arms are sized so the X never touches the circle.
