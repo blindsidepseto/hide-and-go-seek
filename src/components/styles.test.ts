@@ -1,6 +1,6 @@
 import { contrastRatio, deltaE2000 } from '../game/contrast';
 import {
-  avatarFrame, cell, COLORS, REGION_COLORS, WRONG_MARK, wrongMark, X_MARK,
+  avatarFrame, cell, COLORS, grid, GRID_LINE_PX, REGION_COLORS, WRONG_MARK, wrongMark, X_MARK,
 } from './styles';
 
 // WCAG 2.1 AA: 1.4.3 text >= 4.5:1, 1.4.11 graphical objects and UI component boundaries >= 3:1.
@@ -9,7 +9,6 @@ const NON_TEXT_MIN = 3;
 
 describe('board colours meet WCAG 2.1 AA', () => {
   const marksOnSquares: [string, string][] = [
-    ['region border', COLORS.regionBorder],
     ['X mark dark edge', COLORS.xMarkEdge],
     ['wrong-guess mark', COLORS.wrongMark],
     ['focus ring', COLORS.focusRing],
@@ -22,9 +21,8 @@ describe('board colours meet WCAG 2.1 AA', () => {
     });
   });
 
-  it('Given the focus ring, then its inner light ring separates it from the dark region border', () => {
-    const ratio = contrastRatio(COLORS.focusRingInner, COLORS.regionBorder);
-    expect(ratio).toBeGreaterThanOrEqual(NON_TEXT_MIN);
+  it('Given the focus ring, then its dark outer ring stands out from the white grid lines', () => {
+    expect(contrastRatio(COLORS.focusRing, COLORS.gridLine)).toBeGreaterThanOrEqual(NON_TEXT_MIN);
   });
 
   const textPairs: [string, string, string][] = [
@@ -63,23 +61,19 @@ describe('marks and avatars stand out on every region', () => {
     expect(contrastRatio(COLORS.xMark, COLORS.xMarkEdge)).toBeGreaterThanOrEqual(3);
   });
 
-  it('Given the grid, then the thin lines between squares are white and the block borders stay dark, on every side', () => {
+  // User decision (2026-10-23): one uniform white grid, no separate block borders. Blocks are
+  // then told apart by colour only, so the board does not meet WCAG 1.4.1 / AODA.
+  it('Given the grid, then the outer border and every line between squares are white and the same thickness', () => {
     expect(COLORS.gridLine).toBe('#ffffff');
-    const sides = ['borderTop', 'borderRight', 'borderBottom', 'borderLeft'] as const;
-    const inside = cell('#e1e1c3', {
-      top: false, right: false, bottom: false, left: false,
-    });
-    const corner = cell('#e1e1c3', {
-      top: true, right: true, bottom: true, left: true,
-    });
-    sides.forEach((side) => {
-      expect(String(inside[side])).toContain(COLORS.gridLine);
-      expect(String(corner[side])).toContain(COLORS.regionBorder);
-    });
-  });
-
-  it('Given the dark colours, then the X edge matches the block borders', () => {
-    expect(COLORS.xMarkEdge).toBe(COLORS.regionBorder);
+    const style = grid(10);
+    expect(style.border).toBe(`${GRID_LINE_PX}px solid ${COLORS.gridLine}`);
+    expect(style.gap).toBe(`${GRID_LINE_PX}px`);
+    expect(style.background).toBe(COLORS.gridLine);
+    // Squares draw no borders of their own (the white gap is the line), so no line differs.
+    const square = cell('#e1e1c3');
+    expect(square.border).toBe('none');
+    ['borderTop', 'borderRight', 'borderBottom', 'borderLeft']
+      .forEach((side) => expect(square[side as keyof typeof square]).toBeUndefined());
   });
 
   it('Given the wrong-guess mark, then it is bold, the circle fits its box, and the X inside clearly does not touch the circle', () => {

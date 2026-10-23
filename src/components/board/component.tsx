@@ -302,12 +302,6 @@ function Board({
           const mark = game.marks[row][col];
           const hasPerson = solution[row] === col;
           const showPerson = mark === 'found' || (finished && hasPerson);
-          const edges = {
-            top: row === 0 || regions[row - 1][col] !== region,
-            right: col === size - 1 || regions[row][col + 1] !== region,
-            bottom: row === size - 1 || regions[row + 1][col] !== region,
-            left: col === 0 || regions[row][col - 1] !== region,
-          };
           return (
             <button
               // eslint-disable-next-line react/no-array-index-key
@@ -320,7 +314,7 @@ function Board({
               tabIndex={!blocked && focused[0] === row && focused[1] === col ? 0 : -1}
               aria-label={`Row ${row + 1}, column ${col + 1}${
                 mark === 'found' ? `, ${people[region].name} found` : MARK_LABELS[mark]}`}
-              style={styles.cell(regionColors[region], edges)}
+              style={styles.cell(regionColors[region])}
               onClick={() => onClick(row, col)}
               onDoubleClick={() => onDoubleClick(row, col)}
               onKeyDown={(event) => onKeyDown(event, row, col)}
