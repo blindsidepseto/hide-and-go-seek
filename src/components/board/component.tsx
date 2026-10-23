@@ -327,7 +327,7 @@ function Board({
               onPointerLeave={cancelPress}
               onPointerCancel={cancelPress}
             >
-              <svg data-testid="cell-fill" aria-hidden="true" style={styles.svgLayer}>
+              <svg data-testid="cell-fill" aria-hidden="true" style={styles.cellFill}>
                 <rect width="100%" height="100%" fill={regionColors[region]} />
               </svg>
               {showPerson && <Avatar person={people[region]} missed={mark !== 'found'} />}

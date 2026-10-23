@@ -1,6 +1,7 @@
 import { contrastRatio, deltaE2000 } from '../game/contrast';
 import {
-  avatarFrame, cell, COLORS, grid, GRID_LINE_PX, REGION_COLORS, WRONG_MARK, wrongMark, X_MARK,
+  avatarFrame, cell, cellFill, COLORS, grid, GRID_LINE_PX, REGION_COLORS, WRONG_MARK, wrongMark,
+  X_MARK,
 } from './styles';
 
 // WCAG 2.1 AA: 1.4.3 text >= 4.5:1, 1.4.11 graphical objects and UI component boundaries >= 3:1.
@@ -108,5 +109,12 @@ describe('marks and avatars stand out on every region', () => {
   it('Given a missed person, then the outline is dashed; given a found person, then it is solid (shape, not colour)', () => {
     expect(String(avatarFrame(true).border)).toContain('dashed');
     expect(String(avatarFrame(false).border)).toContain('solid');
+  });
+});
+
+describe('focus ring layering', () => {
+  it('Given a square, then it is its own stacking layer and its colour layer sits underneath, so the focus outline is drawn on top', () => {
+    expect(cell().isolation).toBe('isolate');
+    expect(cellFill.zIndex).toBe(-1);
   });
 });

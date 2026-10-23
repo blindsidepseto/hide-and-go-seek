@@ -1,8 +1,7 @@
 /* eslint-disable @typescript-eslint/no-var-requires */
 const CopyWebpackPlugin = require('copy-webpack-plugin');
+const fs = require('fs');
 const path = require('path');
-// eslint-disable-next-line import/extensions
-const { version } = require('./package.json');
 
 // Cache-busting: BBB adds ?version=<manifest version> to the plugin's script URL
 // (akka-bbb-apps Plugins.scala, createFinalJavascriptEntrypointUrl), so browsers fetch the new
@@ -69,6 +68,8 @@ module.exports = {
           from: 'manifest.json',
           to: './',
           transform: (content) => {
+            // Read at build time, so a watch-mode rebuild picks up a version bump.
+            const { version } = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'package.json')));
             const manifest = JSON.parse(content.toString());
             return `${JSON.stringify({ ...manifest, version }, null, 2)}\n`;
           },

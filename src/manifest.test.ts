@@ -57,3 +57,19 @@ describe('plugin version', () => {
     expect(semver.valid(version)).toBe(version);
   });
 });
+
+describe('built manifest', () => {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require
+  const config = require('../webpack.config');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires, global-require, import/extensions
+  const { version } = require('../package.json');
+  const { transform } = config.plugins[0].patterns
+    .find((pattern: { from: string }) => pattern.from === 'manifest.json');
+
+  it('Given the source manifest, when it is built, then it carries the package version and is otherwise unchanged', () => {
+    const source = fs.readFileSync(path.join(__dirname, '..', 'manifest.json'));
+    const built = JSON.parse(transform(source).toString());
+    expect(built.version).toBe(version);
+    expect(built).toEqual({ ...JSON.parse(source.toString()), version });
+  });
+});

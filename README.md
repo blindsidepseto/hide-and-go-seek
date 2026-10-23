@@ -49,7 +49,7 @@ Built for **BigBlueButton 4.0.0 and 4.1** (plugin SDK `1.0.0-beta.3`, `html5Plug
 
 ## Dark mode
 
-BBB's dark theme recolours the page, but it leaves SVG drawings alone. The white grid lines, the block colours and the X are drawn as SVG, so they look the same in light and dark mode.
+BBB's dark theme recolours the page, but BBB tells it to leave SVG drawings alone. The white grid lines, the block colours and the X are drawn as SVG, so they look the same in light and dark mode (checked on dev-bbb). Avatars, the header, the cards and the focus ring are still recoloured by the dark theme.
 
 ## Releases
 

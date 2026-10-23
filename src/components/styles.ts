@@ -148,9 +148,14 @@ export const svgLayer: CSSProperties = {
   pointerEvents: 'none',
 };
 
+// A square's colour layer sits underneath everything else in the square (the square isolates
+// its own stacking layer), so the focus outline and the marks are drawn on top of it.
+export const cellFill: CSSProperties = { ...svgLayer, zIndex: -1 };
+
 // The square's colour is drawn by an SVG layer inside it (see svgLayer).
 export const cell = (): CSSProperties => ({
   position: 'relative',
+  isolation: 'isolate',
   background: 'transparent',
   border: 'none',
   padding: 0,
@@ -196,7 +201,7 @@ export const wrongMark: CSSProperties = {
 };
 
 // Keyboard focus: black outer ring (stands out on the white grid lines and every block colour)
-// and a white inner ring (separates it from the dark X edge and avatar outlines inside the square).
+// and a white inner ring (separates it from the dark avatar outlines and wrong-guess marks).
 // The inner ring is a pseudo-element on top, since the square's SVG colour layer would cover an
 // inset box-shadow.
 export const FOCUS_CSS = `.hgs-cell:focus-visible {
