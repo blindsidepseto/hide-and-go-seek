@@ -16,7 +16,9 @@ export const COLORS = {
   focusRing: '#000000',
   focusRingInner: '#ffffff',
   genericAvatar: '#7a869a',
-  // Outer ring round every avatar, so placeholder avatars stand out on any region colour.
+  // Ring round every avatar, drawn inside its frame so it is never clipped: a light inner ring
+  // and a dark outline, so placeholder avatars stand out on any region colour.
+  avatarRing: '#ffffff',
   avatarOutline: '#1f2937',
 };
 
@@ -144,7 +146,10 @@ export const cell = (
   overflow: 'hidden',
 });
 
-// Scales with the square; a little smaller than an avatar (82%).
+// Marks are drawn in a 10 x 10 box and scale with the square: a little smaller than an
+// avatar (82%). Geometry is checked in styles.test.ts (round stroke ends stay in the box).
+export const X_MARK = { inset: 1.5 };
+
 export const xMark: CSSProperties = {
   width: '72%',
   height: '72%',
@@ -155,11 +160,14 @@ export const xMark: CSSProperties = {
 };
 
 // A circled X, so a wrong guess differs from an X mark by shape, not only colour.
+// The circle and the arms are sized so the X never touches the circle.
+export const WRONG_MARK = { radius: 4.1, arm: 1.4 };
+
 export const wrongMark: CSSProperties = {
   width: '72%',
   height: '72%',
   stroke: COLORS.wrongMark,
-  strokeWidth: 1.8,
+  strokeWidth: 1.6,
   strokeLinecap: 'round',
   fill: 'none',
 };
@@ -171,9 +179,24 @@ export const FOCUS_CSS = `.hgs-cell:focus-visible {
   box-shadow: inset 0 0 0 6px ${COLORS.focusRingInner};
 }`;
 
-export const avatar = (color: string): CSSProperties => ({
+// Frame round an avatar: the outline is a border inside the frame, so it is never clipped by
+// the square. Missed people (shown at game end) get a dashed outline, found people a solid one;
+// nothing is faded, so initials keep 4.5:1.
+export const avatarFrame = (missed: boolean): CSSProperties => ({
   width: '82%',
   height: '82%',
+  boxSizing: 'border-box',
+  borderRadius: '50%',
+  border: `2px ${missed ? 'dashed' : 'solid'} ${COLORS.avatarOutline}`,
+  padding: 2,
+  background: COLORS.avatarRing,
+  display: 'flex',
+  overflow: 'hidden',
+});
+
+export const avatar = (color: string): CSSProperties => ({
+  width: '100%',
+  height: '100%',
   borderRadius: '50%',
   background: color,
   color: readableTextColor(color),
@@ -183,12 +206,4 @@ export const avatar = (color: string): CSSProperties => ({
   fontWeight: 700,
   fontSize: 'min(2.2vh, 16px)',
   objectFit: 'cover',
-  // White inner ring separates the avatar from its dark outer ring.
-  boxShadow: `0 0 0 2px #ffffff, 0 0 0 4px ${COLORS.avatarOutline}`,
 });
-
-// People the player did not find: a dashed outline rather than fading, so initials keep 4.5:1.
-export const missedAvatar: CSSProperties = {
-  outline: `2px dashed ${COLORS.text}`,
-  outlineOffset: 1,
-};

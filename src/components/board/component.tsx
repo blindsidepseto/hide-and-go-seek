@@ -25,6 +25,14 @@ export const LONG_PRESS_MS = 500;
 const defaultPlaySound = createSoundPlayer();
 const noStanding = createStore(NO_STANDING);
 
+// Mark shapes, from the shared geometry in styles.ts (checked in styles.test.ts).
+const xIn = styles.X_MARK.inset;
+const xOut = 10 - styles.X_MARK.inset;
+const xCross = `M${xIn} ${xIn} L${xOut} ${xOut} M${xOut} ${xIn} L${xIn} ${xOut}`;
+const lo = 5 - styles.WRONG_MARK.arm;
+const hi = 5 + styles.WRONG_MARK.arm;
+const wrongCross = `M${lo} ${lo} L${hi} ${hi} M${hi} ${lo} L${lo} ${hi}`;
+
 const MOVES: Record<string, [number, number]> = {
   ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1],
 };
@@ -58,22 +66,20 @@ function initials(name: string): string {
 }
 
 function Avatar({ person, missed }: { person: Person; missed: boolean }) {
-  const style = {
-    ...styles.avatar(person.color || styles.COLORS.genericAvatar),
-    ...(missed ? styles.missedAvatar : {}),
-  };
-  if (person.avatar) {
-    return (
-      <img
-        src={person.avatar}
-        alt={person.name}
-        title={person.name}
-        style={style}
-        draggable={false}
-      />
-    );
-  }
-  return <span title={person.name} style={style}>{initials(person.name)}</span>;
+  const style = styles.avatar(person.color || styles.COLORS.genericAvatar);
+  return (
+    <span data-testid="avatar-frame" style={styles.avatarFrame(missed)}>
+      {person.avatar ? (
+        <img
+          src={person.avatar}
+          alt={person.name}
+          title={person.name}
+          style={style}
+          draggable={false}
+        />
+      ) : <span title={person.name} style={style}>{initials(person.name)}</span>}
+    </span>
+  );
 }
 
 function HowToPlay({ onClose }: { onClose: () => void }) {
@@ -327,13 +333,13 @@ function Board({
               {showPerson && <Avatar person={people[region]} missed={mark !== 'found'} />}
               {!showPerson && mark === 'x' && (
                 <svg data-testid="x-mark" viewBox="0 0 10 10" aria-hidden="true" style={styles.xMark}>
-                  <path d="M1.5 1.5 L8.5 8.5 M8.5 1.5 L1.5 8.5" />
+                  <path d={xCross} />
                 </svg>
               )}
               {!showPerson && mark === 'wrong' && (
                 <svg data-testid="wrong-mark" viewBox="0 0 10 10" aria-hidden="true" style={styles.wrongMark}>
-                  <circle cx="5" cy="5" r="4.2" />
-                  <path d="M3.2 3.2 L6.8 6.8 M6.8 3.2 L3.2 6.8" />
+                  <circle cx="5" cy="5" r={styles.WRONG_MARK.radius} />
+                  <path d={wrongCross} />
                 </svg>
               )}
             </button>

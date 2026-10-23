@@ -194,7 +194,7 @@ describe('Board', () => {
     act(() => { jest.advanceTimersByTime(CLICK_DELAY_MS); });
     const xMark = cell(0, 1).querySelector('[data-testid="x-mark"]') as HTMLElement;
     doubleClick(cell(0, 0));
-    const avatar = screen.getByTitle('Person 0');
+    const avatar = cell(0, 0).querySelector('[data-testid="avatar-frame"]') as HTMLElement;
     expect(parseFloat(xMark.style.width)).toBeLessThan(parseFloat(avatar.style.width));
     const avatarWidth = parseFloat(avatar.style.width);
     expect(parseFloat(xMark.style.width)).toBeGreaterThanOrEqual(avatarWidth - 15);
@@ -268,12 +268,14 @@ describe('Board accessibility of marks and avatars', () => {
     expect(document.head.innerHTML + document.body.innerHTML).toContain('.hgs-cell:focus-visible');
   });
 
-  it('Given the game ends, then people the player missed are outlined, not faded', () => {
+  it('Given the game ends, then people the player missed get a dashed outline, found people a solid one, and none are faded', () => {
     startPlaying();
-    [1, 2, 3].forEach((col) => doubleClick(cell(0, col)));
-    const missed = screen.getByTitle('Person 1');
-    expect(missed.style.opacity).toBe('');
-    expect(missed.style.outline).toContain('dashed');
+    doubleClick(cell(0, 0));
+    [1, 2, 3].forEach((col) => doubleClick(cell(1, col === 2 ? 4 : col)));
+    const frame = (name: string) => screen.getByTitle(name).closest('[data-testid="avatar-frame"]') as HTMLElement;
+    expect(frame('Person 1').style.borderStyle).toBe('dashed');
+    expect(frame('Person 0').style.borderStyle).toBe('solid');
+    expect(frame('Person 1').style.opacity).toBe('');
   });
 });
 

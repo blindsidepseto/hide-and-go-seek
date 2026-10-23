@@ -1,6 +1,6 @@
 import { contrastRatio, deltaE2000 } from '../game/contrast';
 import {
-  avatar, COLORS, REGION_COLORS, wrongMark, xMark,
+  avatarFrame, COLORS, REGION_COLORS, WRONG_MARK, wrongMark, X_MARK, xMark,
 } from './styles';
 
 // WCAG 2.1 AA: 1.4.3 text >= 4.5:1, 1.4.11 graphical objects and UI component boundaries >= 3:1.
@@ -52,17 +52,38 @@ describe('region colours are easy to tell apart', () => {
 });
 
 describe('marks and avatars stand out on every region', () => {
-  it('Given the X and wrong-guess marks, then their strokes are bold enough to read on small squares', () => {
-    // viewBox is 10 units wide; 1.8 is 18% of the mark (was 1.4 and 1.2).
-    expect(Number(xMark.strokeWidth)).toBeGreaterThanOrEqual(1.8);
-    expect(Number(wrongMark.strokeWidth)).toBeGreaterThanOrEqual(1.8);
+  // Marks are drawn in a 10 x 10 box; strokes have round ends that reach stroke/2 past a line.
+  it('Given the X mark, then it is bold (stroke >= 1.6) and its ends stay inside its box', () => {
+    const stroke = Number(xMark.strokeWidth);
+    expect(stroke).toBeGreaterThanOrEqual(1.6);
+    expect(X_MARK.inset - stroke / 2).toBeGreaterThanOrEqual(0);
   });
 
-  it('Given an avatar, then it has a dark outline with at least 3:1 contrast against every region colour', () => {
-    const style = avatar('#7a869a');
-    expect(String(style.boxShadow)).toContain(COLORS.avatarOutline);
+  it('Given the wrong-guess mark, then it is bold, the circle fits its box, and the X inside clearly does not touch the circle', () => {
+    const stroke = Number(wrongMark.strokeWidth);
+    const half = stroke / 2;
+    expect(stroke).toBeGreaterThanOrEqual(1.6);
+    expect(WRONG_MARK.radius + half).toBeLessThanOrEqual(5);
+    const armEnd = WRONG_MARK.arm * Math.SQRT2 + half;
+    const circleInside = WRONG_MARK.radius - half;
+    expect(circleInside - armEnd).toBeGreaterThanOrEqual(0.3);
+  });
+
+  it('Given an avatar frame, then its outline is drawn inside the frame (never clipped by the square) and is dark against every region colour', () => {
+    [false, true].forEach((missed) => {
+      const style = avatarFrame(missed);
+      expect(style.boxSizing).toBe('border-box');
+      expect(style.boxShadow).toBeUndefined();
+      expect(String(style.border)).toContain(COLORS.avatarOutline);
+    });
     const failing = REGION_COLORS
       .filter((region) => contrastRatio(COLORS.avatarOutline, region) < 3);
     expect(failing).toEqual([]);
+    expect(contrastRatio(COLORS.avatarRing, COLORS.avatarOutline)).toBeGreaterThanOrEqual(3);
+  });
+
+  it('Given a missed person, then the outline is dashed; given a found person, then it is solid (shape, not colour)', () => {
+    expect(String(avatarFrame(true).border)).toContain('dashed');
+    expect(String(avatarFrame(false).border)).toContain('solid');
   });
 });
